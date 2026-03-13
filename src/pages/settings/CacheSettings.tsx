@@ -155,7 +155,7 @@ export function CacheSettings() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} key={refreshKey}>
         {cacheService.getBuckets().map((bucket) => (
           <div
             key={bucket}
