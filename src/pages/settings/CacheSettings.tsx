@@ -103,7 +103,9 @@ export function CacheSettings() {
       const r = await fetch('/api/cache/clear', { method: 'POST' });
       if (!r.ok) throw new Error(`Server: ${r.status}`);
     } catch (e) {
-      setMediaCountError(e?.message || 'Failed to clear server cache');
+      const message =
+        e instanceof Error ? e.message : 'Failed to clear server cache';
+      setMediaCountError(message);
     }
     cacheService.clearAll();
     setRefreshKey((k) => k + 1);
