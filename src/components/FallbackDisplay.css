@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--jellyfin-dark) 0%, #1a1a2e 100%);
+  /* No background so DisplayLayout’s mainbackground.png shows through */
 }
 
 .fallback-poster {

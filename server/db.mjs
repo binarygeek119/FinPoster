@@ -7,9 +7,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
 const dataDir = path.join(appRoot, 'data');
+const backupsDir = path.join(dataDir, 'backups');
 const dbPath = path.join(dataDir, 'finposter.db');
 
 let db;
+
+/** Backup the database file before running upgrades. Call when currentVersion < target. */
+function backupDbBeforeUpgrade() {
+  if (!fs.existsSync(dbPath)) return;
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  }
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const backupPath = path.join(backupsDir, `finposter-${ts}.db`);
+  fs.copyFileSync(dbPath, backupPath);
+}
 
 export function initDb() {
   if (!fs.existsSync(dataDir)) {
@@ -20,6 +32,11 @@ export function initDb() {
 
   // Simple versioned migrations using PRAGMA user_version
   const currentVersion = db.pragma('user_version', { simple: true }) || 0;
+  const LATEST_VERSION = 1;
+
+  if (currentVersion < LATEST_VERSION) {
+    backupDbBeforeUpgrade();
+  }
 
   if (currentVersion === 0) {
     // Initial schema
@@ -54,11 +71,12 @@ export function initDb() {
     db.pragma('user_version = 1');
   }
 
-  // Future migrations (example):
+  // Future migrations: backup already run above when currentVersion < LATEST_VERSION.
   // if (currentVersion < 2) {
   //   db.exec(`ALTER TABLE media_items ADD COLUMN some_new_field TEXT;`);
   //   db.pragma('user_version = 2');
   // }
+  // Remember to set LATEST_VERSION = 2 (or next) when adding a migration.
 }
 
 export function getDb() {
@@ -150,5 +168,15 @@ export function getMediaItems({ sourceKind, limit = 50 } = {}) {
   return database
     .prepare(`SELECT * FROM media_items ORDER BY updated_at DESC LIMIT ?`)
     .all(limit);
+}
+
+export function getMediaItemCount(sourceKind = null) {
+  const database = getDb();
+  if (sourceKind) {
+    return database
+      .prepare(`SELECT COUNT(*) as n FROM media_items WHERE source_kind = ?`)
+      .get(sourceKind)?.n ?? 0;
+  }
+  return database.prepare(`SELECT COUNT(*) as n FROM media_items`).get()?.n ?? 0;
 }
 

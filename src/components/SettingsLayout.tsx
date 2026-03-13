@@ -7,9 +7,16 @@
  * uses the same glass panels and Jellyfin accent colors as the rest of the app.
  */
 
-import { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useSettings } from '../store/settingsStore';
 import logo from '../assets/hero.png';
+import jellyfinLogo from '../assets/jellyfin.png';
+
+const MEDIA_SERVERS: { path: string; label: string; logoSrc: string }[] = [
+  { path: '/settings/jellyfin', label: 'Jellyfin', logoSrc: jellyfinLogo },
+  { path: '/settings/plex', label: 'Plex', logoSrc: '/plex.png' },
+  { path: '/settings/emby', label: 'Emby', logoSrc: '/emby.png' },
+];
 
 const SETTINGS_NAV: { path: string; label: string }[] = [
   { path: '/settings/media-showcase', label: 'Media Showcase' },
@@ -24,9 +31,14 @@ const SETTINGS_NAV: { path: string; label: string }[] = [
 ];
 
 export function SettingsLayout() {
-  const location = useLocation();
-  const [serversOpen, setServersOpen] = useState(true);
-  const [arrOpen, setArrOpen] = useState(true);
+  const { settings, setSettings } = useSettings();
+  const ui = settings.ui;
+  const serversOpen = ui.navMediaServersOpen ?? false;
+  const arrOpen = ui.navArrOpen ?? false;
+  const setServersOpen = (value: boolean) =>
+    setSettings({ ui: { ...ui, navMediaServersOpen: value } });
+  const setArrOpen = (value: boolean) =>
+    setSettings({ ui: { ...ui, navArrOpen: value } });
 
   return (
     <div className="settings-shell">
@@ -70,7 +82,7 @@ export function SettingsLayout() {
         {/* Media servers dropdown group – sits under General */}
         <button
           type="button"
-          onClick={() => setServersOpen((v) => !v)}
+          onClick={() => setServersOpen(!serversOpen)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -101,17 +113,15 @@ export function SettingsLayout() {
         </button>
         {serversOpen && (
           <div style={{ marginBottom: 4 }}>
-            {[
-              { path: '/settings/jellyfin', label: 'Jellyfin' },
-              { path: '/settings/plex', label: 'Plex' },
-              { path: '/settings/emby', label: 'Emby' },
-            ].map(({ path, label }) => (
+            {MEDIA_SERVERS.map(({ path, label, logoSrc }) => (
               <NavLink
                 key={path}
                 to={path}
                 end={false}
                 style={({ isActive }) => ({
-                  display: 'block',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
                   padding: '8px 24px',
                   margin: '2px 8px',
                   borderRadius: 8,
@@ -126,7 +136,18 @@ export function SettingsLayout() {
                   fontSize: 14,
                 })}
               >
-                {label}
+                <img
+                  src={logoSrc}
+                  alt=""
+                  style={{
+                    height: '1.25em',
+                    width: 'auto',
+                    maxWidth: 72,
+                    objectFit: 'contain',
+                    flexShrink: 0,
+                  }}
+                />
+                <span>{label}</span>
               </NavLink>
             ))}
           </div>
@@ -139,7 +160,7 @@ export function SettingsLayout() {
               <>
                 <button
                   type="button"
-                  onClick={() => setArrOpen((v) => !v)}
+                  onClick={() => setArrOpen(!arrOpen)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -171,17 +192,19 @@ export function SettingsLayout() {
                 {arrOpen && (
                   <div style={{ marginBottom: 4 }}>
                     {[
-                      { subPath: '/settings/arr/lidarr', label: 'Lidarr' },
-                      { subPath: '/settings/arr/radarr', label: 'Radarr' },
-                      { subPath: '/settings/arr/sonarr', label: 'Sonarr' },
-                      { subPath: '/settings/arr/chaptarr', label: 'Chaptarr' },
-                    ].map(({ subPath, label: subLabel }) => (
+                      { subPath: '/settings/arr/lidarr', label: 'Lidarr', logoSrc: '/lidarr.png' },
+                      { subPath: '/settings/arr/radarr', label: 'Radarr', logoSrc: '/radarr.png' },
+                      { subPath: '/settings/arr/sonarr', label: 'Sonarr', logoSrc: '/sonarr.png' },
+                      { subPath: '/settings/arr/chaptarr', label: 'Chaptarr', logoSrc: '/chaptarr.png' },
+                    ].map(({ subPath, label: subLabel, logoSrc }) => (
                       <NavLink
                         key={subPath}
                         to={subPath}
                         end={false}
                         style={({ isActive }) => ({
-                          display: 'block',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
                           padding: '8px 24px',
                           margin: '2px 8px',
                           borderRadius: 8,
@@ -198,7 +221,18 @@ export function SettingsLayout() {
                           fontSize: 14,
                         })}
                       >
-                        {subLabel}
+                        <img
+                          src={logoSrc}
+                          alt=""
+                          style={{
+                            height: '1.25em',
+                            width: 'auto',
+                            maxWidth: 72,
+                            objectFit: 'contain',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span>{subLabel}</span>
                       </NavLink>
                     ))}
                   </div>

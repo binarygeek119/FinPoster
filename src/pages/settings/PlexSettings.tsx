@@ -13,7 +13,14 @@ export function PlexSettings() {
 
   return (
     <div className="glass-panel" style={{ padding: 24, maxWidth: 640 }}>
-      <h1>Plex</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+        <img
+          src="/plex.png"
+          alt=""
+          style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+        />
+        <h1 style={{ margin: 0 }}>Plex</h1>
+      </div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         Plex support is planned for a future update. You can use Jellyfin as the
         primary media source for now, but you can preconfigure Plex here.
@@ -92,6 +99,35 @@ export function PlexSettings() {
           setSettings({ plex: { ...p, token: ev.target.value } })
         }
       />
+
+      <div style={{ marginTop: 24, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() =>
+            setSettings({
+              ui: { ...settings.ui, mediaSyncRequestedAt: Date.now(), mediaSyncStopped: false },
+            })
+          }
+          disabled={!p.enabled || !p.serverUrl || !p.token}
+          title="Force display to pull fresh media from Plex"
+        >
+          Sync media
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() =>
+            setSettings({
+              ui: { ...settings.ui, mediaSyncStopped: true },
+            })
+          }
+          disabled={(settings.ui.mediaSyncIntervalMinutes ?? 0) <= 0}
+          title="Stop media sync and pause scheduled sync"
+        >
+          Stop sync
+        </button>
+      </div>
     </div>
   );
 }

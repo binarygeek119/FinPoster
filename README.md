@@ -1,3 +1,6 @@
+![Screenshot of a comment on a GitHub issue showing an image, added in the Markdown, of an Octocat smiling and raising a tentacle.]([https://myoctocat.com/assets/images/base-octocat.svg](https://github.com/binarygeek119/FinPoster/blob/main/public/hero.png?raw=true))
+
+
 # FinPoster – Digital Signage Display System
 
 A poster and digital signage display app that behaves like a theater lobby or promotional screen. Built with a **glass-style UI** and **Jellyfin-inspired colors** throughout.

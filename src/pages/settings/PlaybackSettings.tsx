@@ -40,9 +40,32 @@ export function PlaybackSettings() {
     });
   };
 
+  const [tab, setTab] = useState<'main' | 'customize'>('main');
+  const tabStyle = (active: boolean) => ({
+    padding: '8px 16px',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    background: 'transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 500,
+  });
+
   return (
     <div className="glass-panel" style={{ padding: 24, maxWidth: 720 }}>
       <h1>Playback</h1>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--glass-border)' }}>
+        <button type="button" style={tabStyle(tab === 'main')} onClick={() => setTab('main')}>
+          Settings
+        </button>
+        <button type="button" style={tabStyle(tab === 'customize')} onClick={() => setTab('customize')}>
+          Customize
+        </button>
+      </div>
+
+      {tab === 'main' && (
+        <>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
         Configure which Jellyfin users/devices FinPoster should watch for playback.
       </p>
@@ -142,6 +165,14 @@ export function PlaybackSettings() {
           </button>
         </div>
       </div>
+        </>
+      )}
+
+      {tab === 'customize' && (
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          Future playback overlay and behavior customization options will appear here.
+        </p>
+      )}
     </div>
   );
 }
