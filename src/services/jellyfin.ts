@@ -9,6 +9,7 @@
  */
 
 import type { MediaItem, MediaType } from '../types';
+import { logDebug } from './logger';
 
 const DEV_BACKEND_BASE = 'http://localhost:3000';
 
@@ -17,6 +18,13 @@ function backendBaseUrl(): string {
     return DEV_BACKEND_BASE;
   }
   return window.location.origin;
+}
+
+/** Resolve cache/asset URLs so images load from the backend in dev (e.g. /cache/primary/xxx). */
+export function resolveAssetUrl(url: string | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('/') && import.meta.env.DEV) return backendBaseUrl() + url;
+  return url;
 }
 
 const JF_MEDIA_TYPES: Record<MediaType, string> = {
@@ -28,9 +36,11 @@ const JF_MEDIA_TYPES: Record<MediaType, string> = {
   People: 'Person',
 };
 
+const base = () => backendBaseUrl();
+
 async function postJson<T>(path: string, body: unknown): Promise<T | null> {
   try {
-    const res = await fetch(`${backendBaseUrl()}${path}`, {
+    const res = await fetch(`${base()}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -40,6 +50,71 @@ async function postJson<T>(path: string, body: unknown): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+async function getJson<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${base()}${path}`);
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Load media from the backend cache only (cache-first). Returns items stored
+ * from previous syncs (Jellyfin/TMDb fill the cache; display reads only from here).
+ */
+export async function getCachedMedia(
+  source?: string,
+  limit = 50
+): Promise<MediaItem[]> {
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', String(limit));
+  if (source) params.set('source', source);
+  const q = params.toString();
+  const data = await getJson<{
+    id: string;
+    title: string;
+    type?: string;
+    tagline?: string;
+    plot?: string;
+    year?: number;
+    rating?: string;
+    communityRating?: number;
+    studio?: string;
+    posterUrl?: string;
+    backdropUrl?: string;
+    logoUrl?: string;
+    runtime?: string;
+    source: string;
+  }[]>(`/api/media${q ? `?${q}` : ''}`);
+  if (!data?.length) {
+    logDebug('getCachedMedia: no items', source ?? 'any', limit);
+    return [];
+  }
+  logDebug('getCachedMedia: got', data.length, 'items', source ?? 'any');
+  return data.map((it) => ({
+    id: it.id,
+    tmdbId: undefined,
+    tvdbId: undefined,
+    type: (it.type as MediaType) || 'Movie',
+    title: it.title || 'Unknown',
+    tagline: it.tagline,
+    plot: it.plot,
+    year: it.year,
+    rating: it.rating,
+    communityRating: it.communityRating,
+    studio: it.studio,
+    artist: undefined,
+    author: undefined,
+    posterUrl: it.posterUrl,
+    backdropUrl: it.backdropUrl,
+    logoUrl: it.logoUrl,
+    runtime: it.runtime,
+    source: it.source as MediaItem['source'],
+  }));
 }
 
 /** Jellyfin library (we need Id and Name). */
@@ -100,10 +175,12 @@ export async function getJellyfinLibraryItems(
     plot?: string;
     year?: number;
     rating?: string;
+    communityRating?: number;
     studio?: string;
     posterUrl?: string;
     backdropUrl?: string;
     logoUrl?: string;
+    runtime?: string;
   }[]>('/api/jellyfin/items', {
     serverUrl,
     apiKey,
@@ -123,12 +200,14 @@ export async function getJellyfinLibraryItems(
     plot: it.plot,
     year: it.year,
     rating: it.rating,
+    communityRating: it.communityRating,
     studio: it.studio,
     artist: undefined,
     author: undefined,
     posterUrl: it.posterUrl,
     backdropUrl: it.backdropUrl,
     logoUrl: it.logoUrl,
+    runtime: it.runtime,
     source: 'jellyfin',
   }));
 }

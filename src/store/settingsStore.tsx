@@ -6,10 +6,11 @@
  * is SETTINGS_STORAGE_KEY so we can also offer backup/restore from file later.
  */
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { AppSettings } from '../types';
 import { defaultSettings } from '../defaults';
 import { SETTINGS_STORAGE_KEY } from '../defaults';
+import { setAppSettingsForLogger, logWarn } from '../services/logger';
 
 /** Try to load saved settings from localStorage; if missing or invalid, use defaults. */
 function loadStoredSettings(): AppSettings {
@@ -60,7 +61,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch (e) {
-      console.warn('FinPoster: could not persist settings', e);
+      logWarn('FinPoster: could not persist settings', e);
     }
   }, [settings]);
 
@@ -76,6 +77,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return merged;
     });
   }, []);
+
+  useEffect(() => {
+    setAppSettingsForLogger(settings);
+  }, [settings]);
 
   const value = useMemo(
     () => ({ settings, setSettings, persist }),
@@ -94,7 +99,7 @@ export function useSettings() {
   if (!ctx) {
     // In dev tools or isolated renders, components might mount outside the
     // provider. Fall back to default settings rather than crashing the app.
-    console.warn('FinPoster: useSettings used outside SettingsProvider; falling back to defaults.');
+    logWarn('FinPoster: useSettings used outside SettingsProvider; falling back to defaults.');
     const noop: SetSettings = () => {};
     return {
       settings: defaultSettings,

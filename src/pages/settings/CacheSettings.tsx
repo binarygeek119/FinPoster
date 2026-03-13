@@ -3,9 +3,10 @@
  *
  * The cache stores metadata and image URLs locally to reduce API calls and
  * improve loading. User can clear individual buckets (primary, logo, metadata,
- * artists, authors, backdrop) or clear all. Same glass styling.
+ * people, backdrop) or clear all. Also shows backend media cache count (from Jellyfin sync).
  */
 
+import { useEffect, useState } from 'react';
 import { useSettings } from '../../store/settingsStore';
 import { cacheService } from '../../services/cache';
 import type { CacheBucket } from '../../types';
@@ -14,23 +15,65 @@ const BUCKET_LABELS: Record<CacheBucket, string> = {
   primary: 'Primary (posters)',
   logo: 'Logos',
   metadata: 'Metadata',
-  artists: 'Artists (people images)',
-  authors: 'Authors (people images)',
+  people: 'People (artists, authors, cast, directors)',
   backdrop: 'Backdrops',
+  music: 'Music (artwork)',
+  photos: 'Photos',
 };
 
 export function CacheSettings() {
   const { setSettings } = useSettings();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [mediaCacheCount, setMediaCacheCount] = useState<number | null>(null);
+  const [mediaCountError, setMediaCountError] = useState<string | null>(null);
+
+  const refreshCounts = () => {
+    setRefreshKey((k) => k + 1);
+    setSettings(() => ({}));
+  };
+
+  const fetchMediaCount = () => {
+    setMediaCountError(null);
+    // Use relative URL so in dev Vite proxies to backend; in prod same origin.
+    fetch('/api/media/count')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        const raw = data?.count;
+        const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? parseInt(raw, 10) : null;
+        setMediaCacheCount(Number.isFinite(n) ? n : null);
+      })
+      .catch((e) => {
+        setMediaCacheCount(null);
+        setMediaCountError(e?.message || 'Failed to load');
+      });
+  };
+
+  useEffect(() => {
+    refreshCounts();
+    fetchMediaCount();
+  }, []);
+
+  useEffect(() => {
+    const onFocus = () => {
+      refreshCounts();
+      fetchMediaCount();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const clearBucket = (bucket: CacheBucket) => {
     cacheService.clearBucket(bucket);
-    setSettings({}); // trigger re-read so UI can show "cleared"
+    setRefreshKey((k) => k + 1);
   };
 
   const clearAll = () => {
     if (window.confirm('Clear all cached metadata and artwork? This cannot be undone.')) {
       cacheService.clearAll();
-      setSettings({});
+      setRefreshKey((k) => k + 1);
     }
   };
 
@@ -41,6 +84,29 @@ export function CacheSettings() {
         Clear cached metadata and image references. Next load will re-fetch from
         the primary source and fallback services.
       </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        {mediaCountError && (
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+            {mediaCountError}
+          </span>
+        )}
+        {mediaCacheCount !== null && !mediaCountError && (
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+            Media cache (from Jellyfin sync): <strong>{mediaCacheCount}</strong> item(s)
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            refreshCounts();
+            fetchMediaCount();
+          }}
+        >
+          Refresh counts
+        </button>
+      </div>
 
       <div
         style={{
@@ -57,7 +123,7 @@ export function CacheSettings() {
           onClick={() => {
             const next = !cacheService.isAllEnabled();
             cacheService.setAllEnabled(next);
-            setSettings({});
+            refreshCounts();
           }}
           aria-pressed={cacheService.isAllEnabled()}
           style={{
@@ -89,7 +155,7 @@ export function CacheSettings() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} key={refreshKey}>
         {cacheService.getBuckets().map((bucket) => (
           <div
             key={bucket}
@@ -112,7 +178,7 @@ export function CacheSettings() {
                 onClick={() => {
                   const next = !cacheService.isBucketEnabled(bucket);
                   cacheService.setBucketEnabled(bucket, next);
-                  setSettings({});
+                  refreshCounts();
                 }}
                 aria-pressed={cacheService.isBucketEnabled(bucket)}
                 style={{

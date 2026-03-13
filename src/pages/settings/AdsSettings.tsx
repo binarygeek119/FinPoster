@@ -66,9 +66,32 @@ export function AdsSettings() {
     });
   };
 
+  const [tab, setTab] = useState<'main' | 'customize'>('main');
+  const tabStyle = (active: boolean) => ({
+    padding: '8px 16px',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    background: 'transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 500,
+  });
+
   return (
     <div className="glass-panel" style={{ padding: 24, maxWidth: 640 }}>
       <h1>Ads</h1>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--glass-border)' }}>
+        <button type="button" style={tabStyle(tab === 'main')} onClick={() => setTab('main')}>
+          Settings
+        </button>
+        <button type="button" style={tabStyle(tab === 'customize')} onClick={() => setTab('customize')}>
+          Customize
+        </button>
+      </div>
+
+      {tab === 'main' && (
+        <>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         Show uploaded advertisement images between poster rotations. You can upload and configure ads here.
       </p>
@@ -354,6 +377,14 @@ export function AdsSettings() {
       >
         {uploading ? 'Uploading…' : 'Upload ad'}
       </button>
+        </>
+      )}
+
+      {tab === 'customize' && (
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          Future options for customizing ad layout and appearance in the display will appear here.
+        </p>
+      )}
     </div>
   );
 }

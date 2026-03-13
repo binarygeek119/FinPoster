@@ -19,9 +19,10 @@ const BUCKETS: CacheBucket[] = [
   'primary',
   'logo',
   'metadata',
-  'artists',
-  'authors',
+  'people',
   'backdrop',
+  'music',
+  'photos',
 ];
 
 /** Key for a bucket + item id (e.g. poster URL for a TMDb id). */
@@ -33,9 +34,23 @@ function key(bucket: CacheBucket, id: string): string {
 function listKeysInBucket(bucket: CacheBucket): string[] {
   const out: string[] = [];
   const prefix = `${PREFIX}${bucket}_`;
-  for (let i = 0; i < localStorage.length; i++) {
+  const n = localStorage.length;
+  for (let i = 0; i < n; i++) {
     const k = localStorage.key(i);
-    if (k?.startsWith(prefix)) out.push(k);
+    if (k != null && k.startsWith(prefix)) out.push(k);
+  }
+  return out;
+}
+
+/** List all cache data keys (any key starting with PREFIX, excluding flag keys). */
+function listAllCacheKeys(): string[] {
+  const out: string[] = [];
+  const n = localStorage.length;
+  for (let i = 0; i < n; i++) {
+    const k = localStorage.key(i);
+    if (k != null && k.startsWith(PREFIX) && !k.startsWith(FLAG_PREFIX) && k !== GLOBAL_FLAG_KEY) {
+      out.push(k);
+    }
   }
   return out;
 }
@@ -83,15 +98,17 @@ export const cacheService = {
 
   /** Clear all entries in a bucket. */
   clearBucket(bucket: CacheBucket): void {
-    for (const k of listKeysInBucket(bucket)) {
+    const keys = listKeysInBucket(bucket);
+    for (const k of keys) {
       localStorage.removeItem(k);
     }
   },
 
-  /** Clear all cache buckets. */
+  /** Clear all cache buckets (all keys with cache data prefix). */
   clearAll(): void {
-    for (const b of BUCKETS) {
-      this.clearBucket(b);
+    const keys = listAllCacheKeys();
+    for (const k of keys) {
+      localStorage.removeItem(k);
     }
   },
 

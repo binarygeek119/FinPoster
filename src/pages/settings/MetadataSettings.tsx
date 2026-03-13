@@ -79,6 +79,56 @@ export function MetadataSettings() {
         (where applicable) to recover it.
       </p>
 
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          marginBottom: 24,
+        }}
+      >
+        <span>Use metadata as source</span>
+        <button
+          type="button"
+          onClick={() =>
+            setSettings({
+              metadata: { ...m, metadataAsSource: !m.metadataAsSource },
+            })
+          }
+          aria-pressed={m.metadataAsSource}
+          style={{
+            position: 'relative',
+            width: 46,
+            height: 24,
+            borderRadius: 999,
+            border: '1px solid var(--glass-border)',
+            background: m.metadataAsSource
+              ? 'var(--accent)'
+              : 'rgba(255,255,255,0.08)',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: m.metadataAsSource ? 24 : 2,
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              background: '#ffffff',
+              boxShadow: '0 0 6px rgba(0,0,0,0.4)',
+              transition: 'left 0.18s ease',
+            }}
+          />
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -16, marginBottom: 24 }}>
+        When on, missing posters and metadata are filled from TMDb, TheTVDB, Google Books, and Comic Vine when keys are set.
+      </p>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
         <img
           src={tmdbLogo}

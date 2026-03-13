@@ -13,7 +13,14 @@ export function EmbySettings() {
 
   return (
     <div className="glass-panel" style={{ padding: 24, maxWidth: 640 }}>
-      <h1>Emby</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+        <img
+          src="/emby.png"
+          alt=""
+          style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+        />
+        <h1 style={{ margin: 0 }}>Emby</h1>
+      </div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         Emby support is planned for a future update. You can preconfigure the connection
         here so it is ready when Emby is enabled as a source.
@@ -92,6 +99,35 @@ export function EmbySettings() {
           setSettings({ emby: { ...e, apiKey: ev.target.value } })
         }
       />
+
+      <div style={{ marginTop: 24, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() =>
+            setSettings({
+              ui: { ...settings.ui, mediaSyncRequestedAt: Date.now(), mediaSyncStopped: false },
+            })
+          }
+          disabled={!e.enabled || !e.serverUrl || !e.apiKey}
+          title="Force display to pull fresh media from Emby"
+        >
+          Sync media
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() =>
+            setSettings({
+              ui: { ...settings.ui, mediaSyncStopped: true },
+            })
+          }
+          disabled={(settings.ui.mediaSyncIntervalMinutes ?? 0) <= 0}
+          title="Stop media sync and pause scheduled sync"
+        >
+          Stop sync
+        </button>
+      </div>
     </div>
   );
 }

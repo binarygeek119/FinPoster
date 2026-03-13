@@ -59,9 +59,32 @@ export function NowShowingSettings() {
     });
   };
 
+  const [tab, setTab] = useState<'main' | 'customize'>('main');
+  const tabStyle = (active: boolean) => ({
+    padding: '8px 16px',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    background: 'transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 500,
+  });
+
   return (
     <div className="glass-panel" style={{ padding: 24, maxWidth: 640 }}>
       <h1>Now Showing</h1>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--glass-border)' }}>
+        <button type="button" style={tabStyle(tab === 'main')} onClick={() => setTab('main')}>
+          Settings
+        </button>
+        <button type="button" style={tabStyle(tab === 'customize')} onClick={() => setTab('customize')}>
+          Customize
+        </button>
+      </div>
+
+      {tab === 'main' && (
+        <>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         Configure the theater showtime board: where entries come from and how showtimes are generated.
       </p>
@@ -230,6 +253,14 @@ export function NowShowingSettings() {
         <option value="manual">Use manual showtimes</option>
         <option value="random">Generate random showtimes</option>
       </select>
+        </>
+      )}
+
+      {tab === 'customize' && (
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          Future layout and styling options for the Now Showing board will appear here.
+        </p>
+      )}
     </div>
   );
 }

@@ -22,7 +22,7 @@ export function FallbackDisplay() {
             alt=""
             className="fallback-hero-img"
           />
-          <p className="fallback-message">No media available. Click to open settings.</p>
+          <p className="fallback-message">No media. Click anywhere to open settings.</p>
         </div>
       </div>
     </div>

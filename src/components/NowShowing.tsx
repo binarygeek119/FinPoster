@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { NowShowingEntry } from '../types';
+import { resolveAssetUrl } from '../services/jellyfin';
 import './NowShowing.css';
 
 interface NowShowingProps {
@@ -65,7 +66,7 @@ export function NowShowing({ entries }: NowShowingProps) {
               className="now-showing-poster"
               style={{
                 backgroundImage: entry.media.posterUrl
-                  ? `url(${entry.media.posterUrl})`
+                  ? `url(${resolveAssetUrl(entry.media.posterUrl)})`
                   : undefined,
               }}
             >
@@ -78,7 +79,7 @@ export function NowShowing({ entries }: NowShowingProps) {
             <div className="now-showing-info">
               {entry.media.logoUrl ? (
                 <img
-                  src={entry.media.logoUrl}
+                  src={resolveAssetUrl(entry.media.logoUrl)}
                   alt=""
                   className="now-showing-logo"
                 />
