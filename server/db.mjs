@@ -180,3 +180,9 @@ export function getMediaItemCount(sourceKind = null) {
   return database.prepare(`SELECT COUNT(*) as n FROM media_items`).get()?.n ?? 0;
 }
 
+/** Remove all rows from media_items (used when clearing cache so next sync repopulates). */
+export function clearMediaItems() {
+  const database = getDb();
+  database.prepare(`DELETE FROM media_items`).run();
+}
+

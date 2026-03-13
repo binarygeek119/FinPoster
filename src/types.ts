@@ -165,6 +165,8 @@ export interface MediaShowcaseSettings {
   tickerColor: string;
   /** Hex color for time pill text (and border). */
   timePillColor: string;
+  /** Hex color for playback start/end time text on ProgressSlide. */
+  playbackTimeColor?: string;
   /** Font for ticker bar (e.g. 'bebas-neue', 'oswald'). 'default' = theme font. */
   displayFont: string;
   /** Font for Home Cinema title (e.g. 'bebas-neue', 'oswald'). 'default' = use displayFont. */

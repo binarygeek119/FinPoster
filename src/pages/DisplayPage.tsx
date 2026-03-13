@@ -14,7 +14,8 @@ import { NowShowing } from '../components/NowShowing';
 import { AdsDisplay } from '../components/AdsDisplay';
 import { FallbackDisplay } from '../components/FallbackDisplay';
 import { Metapills } from '../components/Metapills';
-import { ProgressSlide, hasPlayback } from '../components/ProgressSlide';
+import { hasPlayback } from '../components/ProgressSlide';
+import { PlaybackDisplay } from '../components/PlaybackDisplay';
 import { useDisplayRotation } from '../hooks/useDisplayRotation';
 import { useSettings } from '../store/settingsStore';
 import { resolveAssetUrl } from '../services/jellyfin';
@@ -72,7 +73,7 @@ export function DisplayPage() {
     ) : mode === 'metapills' ? (
       <FallbackDisplay />
     ) : mode === 'progressslide' && showProgressSlide ? (
-      <ProgressSlide item={currentMedia} progress={playingProgress} />
+      <PlaybackDisplay item={currentMedia} progress={playingProgress} />
     ) : mode === 'progressslide' ? (
       <FallbackDisplay />
     ) : (

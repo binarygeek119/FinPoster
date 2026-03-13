@@ -30,6 +30,7 @@ export interface EffectiveDisplayColors {
   homeCinemaTitleColor: string;
   tickerColor: string;
   timePillColor: string;
+  playbackTimeColor: string;
   accentColor: string;
   metapillsColors: Record<string, string>;
 }
@@ -51,6 +52,7 @@ function getColorfulDefaults(): EffectiveDisplayColors {
     homeCinemaTitleColor: DEFAULT_HOME_CINEMA_TITLE_COLOR,
     tickerColor: DEFAULT_TICKER_COLOR,
     timePillColor: DEFAULT_TIME_PILL_COLOR,
+    playbackTimeColor: DEFAULT_TIME_PILL_COLOR,
     accentColor: DEFAULT_ACCENT_HEX,
     metapillsColors: { ...COLORFUL_METAPILLS },
   };
@@ -75,6 +77,7 @@ export function getEffectiveDisplayColors(
       homeCinemaTitleColor: gray,
       tickerColor: gray,
       timePillColor: gray,
+      playbackTimeColor: gray,
       accentColor: gray,
       metapillsColors: Object.fromEntries(METAPILL_KEYS.map((k) => [k, gray])),
     };
@@ -88,6 +91,7 @@ export function getEffectiveDisplayColors(
     homeCinemaTitleColor: opts.homeCinemaTitleColor ?? opts.tickerColor ?? '#ff0000',
     tickerColor: opts.tickerColor ?? '#ffffff',
     timePillColor: opts.timePillColor ?? opts.tickerColor ?? '#eef207',
+    playbackTimeColor: opts.playbackTimeColor ?? opts.timePillColor ?? opts.tickerColor ?? DEFAULT_TIME_PILL_COLOR,
     accentColor: opts.accentColor ?? '#00a4dc',
     metapillsColors: opts.metapillsColors ?? {},
   };

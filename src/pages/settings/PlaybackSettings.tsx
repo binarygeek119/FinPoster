@@ -9,9 +9,24 @@
 import { useState } from 'react';
 import { useSettings } from '../../store/settingsStore';
 
+/** Metapill keys and display labels for per-pill color settings (shared with Media Showcase). */
+const METAPILL_COLOR_KEYS: { key: string; label: string }[] = [
+  { key: 'type', label: 'Type' },
+  { key: 'community-rating', label: 'Community rating' },
+  { key: 'year', label: 'Year' },
+  { key: 'runtime', label: 'Runtime' },
+  { key: 'parental-rating', label: 'Parental rating' },
+  { key: 'studio', label: 'Studio' },
+  { key: 'network', label: 'Network' },
+  { key: 'publisher', label: 'Publisher' },
+  { key: 'artist', label: 'Artist' },
+  { key: 'author', label: 'Author' },
+];
+
 export function PlaybackSettings() {
   const { settings, setSettings } = useSettings();
   const j = settings.jellyfin;
+  const m = settings.mediaShowcase;
   const [input, setInput] = useState('');
   const list = j.playbackWatchIds ?? [];
 
@@ -169,9 +184,309 @@ export function PlaybackSettings() {
       )}
 
       {tab === 'customize' && (
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          Future playback overlay and behavior customization options will appear here.
-        </p>
+        <>
+          <h2 style={{ marginTop: 0, marginBottom: 12 }}>Colors</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 8 }}>
+            Color mode for playback and Media Showcase. <strong>Off</strong> = use your colors below.{' '}
+            <strong>Colorful</strong> = default palette. <strong>Mono</strong> = light gray.
+          </p>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setSettings({ mediaShowcase: { ...m, colorMode: 'off' } })}
+              aria-pressed={(m.colorMode ?? 'off') === 'off'}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid var(--glass-border)',
+                background: (m.colorMode ?? 'off') === 'off' ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Off
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettings({ mediaShowcase: { ...m, colorMode: 'colorful' } })}
+              aria-pressed={m.colorMode === 'colorful'}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid var(--glass-border)',
+                background: m.colorMode === 'colorful' ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Colorful
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettings({ mediaShowcase: { ...m, colorMode: 'mono' } })}
+              aria-pressed={m.colorMode === 'mono'}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid var(--glass-border)',
+                background: m.colorMode === 'mono' ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Mono
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Border color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.borderColor ?? '#ffffff'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, borderColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#ffffff"
+                  value={m.borderColor ?? ''}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, borderColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Home Cinema title color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.homeCinemaTitleColor ?? '#ff0000'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, homeCinemaTitleColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#ff0000"
+                  value={m.homeCinemaTitleColor ?? ''}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, homeCinemaTitleColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Ticker bar text color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.tickerColor || '#ffffff'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, tickerColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#ffffff"
+                  value={m.tickerColor}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, tickerColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Time pill text color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.timePillColor ?? m.tickerColor ?? '#eef207'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, timePillColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#eef207"
+                  value={m.timePillColor ?? m.tickerColor ?? ''}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, timePillColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Playback time text color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.playbackTimeColor ?? m.timePillColor ?? m.tickerColor ?? '#eef207'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, playbackTimeColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#eef207"
+                  value={m.playbackTimeColor ?? m.timePillColor ?? m.tickerColor ?? ''}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, playbackTimeColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Accent color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.accentColor || '#00a4dc'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, accentColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#00a4dc"
+                  value={m.accentColor}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, accentColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 12 }}>
+            Metapills and playback overlay: set a color for each pill type. Leave empty to use the default
+            text color.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+            {METAPILL_COLOR_KEYS.map(({ key, label }) => (
+              <div
+                key={key}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: '1px solid var(--glass-border)',
+                  background: 'rgba(0,0,0,0.2)',
+                }}
+              >
+                <span style={{ fontSize: 13, minWidth: 100 }}>{label}</span>
+                <input
+                  type="color"
+                  title={`${label} color`}
+                  value={m.metapillsColors?.[key] ?? '#ffffff'}
+                  onChange={(e) =>
+                    setSettings({
+                      mediaShowcase: {
+                        ...m,
+                        metapillsColors: {
+                          ...(m.metapillsColors ?? {}),
+                          [key]: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  style={{
+                    width: 32,
+                    height: 28,
+                    padding: 0,
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: 6,
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Default"
+                  value={m.metapillsColors?.[key] ?? ''}
+                  onChange={(e) => {
+                    const next = { ...(m.metapillsColors ?? {}) };
+                    const v = e.target.value.trim();
+                    if (v) next[key] = v;
+                    else delete next[key];
+                    setSettings({ mediaShowcase: { ...m, metapillsColors: next } });
+                  }}
+                  style={{ width: 72, fontSize: 12 }}
+                  aria-label={`${label} color`}
+                />
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -77,6 +77,7 @@ export const defaultMediaShowcase = {
   backdropBlurPx: 18,
   tickerColor: DEFAULT_TICKER_COLOR,
   timePillColor: DEFAULT_TIME_PILL_COLOR,
+  playbackTimeColor: DEFAULT_TIME_PILL_COLOR,
   displayFont: 'default',
   homeCinemaFont: 'default',
   homeCinemaTitleColor: DEFAULT_HOME_CINEMA_TITLE_COLOR,

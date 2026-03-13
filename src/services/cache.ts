@@ -98,9 +98,19 @@ export const cacheService = {
 
   /** Clear all entries in a bucket. */
   clearBucket(bucket: CacheBucket): void {
-    const keys = listKeysInBucket(bucket);
-    for (const k of keys) {
-      localStorage.removeItem(k);
+    const prefix = `${PREFIX}${bucket}_`;
+    const n = localStorage.length;
+    const toRemove: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const k = localStorage.key(i);
+      if (k != null && k.startsWith(prefix)) toRemove.push(k);
+    }
+    for (const k of toRemove) {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        // ignore
+      }
     }
   },
 
