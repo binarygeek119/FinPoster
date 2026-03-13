@@ -333,7 +333,7 @@ export function PlaybackSettings() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 8 }}>Time pill text color</label>
+              <label style={{ display: 'block', marginBottom: 8 }}>Current time text color</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   type="color"
@@ -363,7 +363,7 @@ export function PlaybackSettings() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 8 }}>Playback time text color</label>
+              <label style={{ display: 'block', marginBottom: 8 }}>Start time text color</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   type="color"
@@ -388,6 +388,82 @@ export function PlaybackSettings() {
                   value={m.playbackTimeColor ?? m.timePillColor ?? m.tickerColor ?? ''}
                   onChange={(e) =>
                     setSettings({ mediaShowcase: { ...m, playbackTimeColor: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>End time text color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={
+                    m.playbackEndTimeColor ??
+                    m.playbackTimeColor ??
+                    m.timePillColor ??
+                    m.tickerColor ??
+                    '#eef207'
+                  }
+                  onChange={(e) =>
+                    setSettings({
+                      mediaShowcase: { ...m, playbackEndTimeColor: e.target.value },
+                    })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#eef207"
+                  value={
+                    m.playbackEndTimeColor ??
+                    m.playbackTimeColor ??
+                    m.timePillColor ??
+                    m.tickerColor ??
+                    ''
+                  }
+                  onChange={(e) =>
+                    setSettings({
+                      mediaShowcase: { ...m, playbackEndTimeColor: e.target.value },
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 8 }}>Playback progress bar color</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="color"
+                  value={m.progressBarColor ?? m.accentColor ?? '#00a4dc'}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, progressBarColor: e.target.value } })
+                  }
+                  style={{
+                    width: 44,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: 8,
+                    border: '1px solid var(--glass-border)',
+                    background: 'transparent',
+                  }}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="#00a4dc"
+                  value={m.progressBarColor ?? m.accentColor ?? ''}
+                  onChange={(e) =>
+                    setSettings({ mediaShowcase: { ...m, progressBarColor: e.target.value } })
                   }
                 />
               </div>

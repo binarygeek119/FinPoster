@@ -31,6 +31,8 @@ export interface EffectiveDisplayColors {
   tickerColor: string;
   timePillColor: string;
   playbackTimeColor: string;
+  playbackEndTimeColor: string;
+  progressBarColor: string;
   accentColor: string;
   metapillsColors: Record<string, string>;
 }
@@ -53,6 +55,8 @@ function getColorfulDefaults(): EffectiveDisplayColors {
     tickerColor: DEFAULT_TICKER_COLOR,
     timePillColor: DEFAULT_TIME_PILL_COLOR,
     playbackTimeColor: DEFAULT_TIME_PILL_COLOR,
+    playbackEndTimeColor: DEFAULT_TIME_PILL_COLOR,
+    progressBarColor: DEFAULT_ACCENT_HEX,
     accentColor: DEFAULT_ACCENT_HEX,
     metapillsColors: { ...COLORFUL_METAPILLS },
   };
@@ -78,6 +82,8 @@ export function getEffectiveDisplayColors(
       tickerColor: gray,
       timePillColor: gray,
       playbackTimeColor: gray,
+      playbackEndTimeColor: gray,
+      progressBarColor: gray,
       accentColor: gray,
       metapillsColors: Object.fromEntries(METAPILL_KEYS.map((k) => [k, gray])),
     };
@@ -92,6 +98,13 @@ export function getEffectiveDisplayColors(
     tickerColor: opts.tickerColor ?? '#ffffff',
     timePillColor: opts.timePillColor ?? opts.tickerColor ?? '#eef207',
     playbackTimeColor: opts.playbackTimeColor ?? opts.timePillColor ?? opts.tickerColor ?? DEFAULT_TIME_PILL_COLOR,
+    playbackEndTimeColor:
+      opts.playbackEndTimeColor ??
+      opts.playbackTimeColor ??
+      opts.timePillColor ??
+      opts.tickerColor ??
+      DEFAULT_TIME_PILL_COLOR,
+    progressBarColor: opts.progressBarColor ?? opts.accentColor ?? DEFAULT_ACCENT_HEX,
     accentColor: opts.accentColor ?? '#00a4dc',
     metapillsColors: opts.metapillsColors ?? {},
   };

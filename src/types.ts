@@ -165,8 +165,12 @@ export interface MediaShowcaseSettings {
   tickerColor: string;
   /** Hex color for time pill text (and border). */
   timePillColor: string;
-  /** Hex color for playback start/end time text on ProgressSlide. */
+  /** Hex color for playback start time text on ProgressSlide. */
   playbackTimeColor?: string;
+  /** Hex color for playback end time text on ProgressSlide. */
+  playbackEndTimeColor?: string;
+  /** Hex color for playback progress bar fill. */
+  progressBarColor?: string;
   /** Font for ticker bar (e.g. 'bebas-neue', 'oswald'). 'default' = theme font. */
   displayFont: string;
   /** Font for Home Cinema title (e.g. 'bebas-neue', 'oswald'). 'default' = use displayFont. */
@@ -201,6 +205,8 @@ export interface NowShowingSettings {
   theaterCount: number;
   /** 'manual' = use manual IDs only; 'random' = mix with server libraries. */
   sourceMode: 'manual' | 'random';
+  /** When in manual source mode, also fill remaining rows with random media from server libraries. */
+  manualFillWithRandom?: boolean;
   /** User-defined showtimes or 'random' to generate. */
   showtimeMode: 'manual' | 'random';
   manualShowtimes: string[];
@@ -214,6 +220,8 @@ export interface AdsSettings {
   adDisplaySeconds: number;
   /** Show ads after this many poster rotations in Media Showcase. */
   insertionIntervalPosters: number;
+  /** Background blur strength in pixels for ads display backdrop. */
+  adBackgroundBlurPx?: number;
 }
 
 /** External API keys for metadata fallback (TMDb, TheTVDB, Google Books, Comic Vine). */

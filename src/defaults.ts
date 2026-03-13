@@ -78,6 +78,8 @@ export const defaultMediaShowcase = {
   tickerColor: DEFAULT_TICKER_COLOR,
   timePillColor: DEFAULT_TIME_PILL_COLOR,
   playbackTimeColor: DEFAULT_TIME_PILL_COLOR,
+  playbackEndTimeColor: DEFAULT_TIME_PILL_COLOR,
+  progressBarColor: DEFAULT_ACCENT_HEX,
   displayFont: 'default',
   homeCinemaFont: 'default',
   homeCinemaTitleColor: DEFAULT_HOME_CINEMA_TITLE_COLOR,
@@ -100,6 +102,7 @@ export const defaultNowShowing = {
   sourceMode: 'random' as const,
   showtimeMode: 'random' as const,
   manualShowtimes: [] as string[],
+  manualFillWithRandom: false,
 };
 
 export const defaultAds = {
@@ -107,6 +110,7 @@ export const defaultAds = {
   enabledAdIds: [] as string[],
   adDisplaySeconds: 10,
   insertionIntervalPosters: 5,
+  adBackgroundBlurPx: 24,
 };
 
 export const defaultMetadata = {

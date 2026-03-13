@@ -73,10 +73,13 @@ export function ProgressSlide({ item, progress: progressProp = 0 }: ProgressSlid
         <div className="progress-slide-track">
           <div
             className="progress-slide-fill"
-            style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
+            style={{
+              width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
+              backgroundColor: colors.progressBarColor,
+            }}
           />
         </div>
-        <span className="progress-slide-time" style={{ color: colors.playbackTimeColor }}>
+        <span className="progress-slide-time" style={{ color: colors.playbackEndTimeColor }}>
           {formatTime(end)}
         </span>
       </div>

@@ -8,11 +8,13 @@
 
 import type React from 'react';
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../store/settingsStore';
 import { uploadFileToBackend } from '../../services/uploadClient';
 
 export function AdsSettings() {
   const { settings, setSettings } = useSettings();
+  const navigate = useNavigate();
   const a = settings.ads;
   const adUploads = settings.uploads.filter((u) => u.category === 'ads');
 
@@ -92,9 +94,21 @@ export function AdsSettings() {
 
       {tab === 'main' && (
         <>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
         Show uploaded advertisement images between poster rotations. You can upload and configure ads here.
       </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          Quickly preview how ads look on the main display.
+        </span>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => navigate('/?mode=ads')}
+        >
+          Test ads on display
+        </button>
+      </div>
 
       <div
         style={{
@@ -237,21 +251,6 @@ export function AdsSettings() {
                   </button>
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 26 }}>
-                  <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Internal name for this ad"
-                    value={u.name}
-                    onChange={(e) => {
-                      const next = settings.uploads.map((x) =>
-                        x.id === u.id ? { ...x, name: e.target.value } : x,
-                      );
-                      setSettings({ uploads: next });
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 26 }}>
                   <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>Display label</label>
                   <input
                     type="text"
@@ -381,9 +380,63 @@ export function AdsSettings() {
       )}
 
       {tab === 'customize' && (
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          Future options for customizing ad layout and appearance in the display will appear here.
-        </p>
+        <>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
+            Customize how ads are rendered on the display.
+          </p>
+          <div style={{ marginTop: 8 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                color: 'var(--text-muted)',
+                marginBottom: 4,
+              }}
+            >
+              Background blur strength (px)
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input
+                type="range"
+                min={0}
+                max={64}
+                value={a.adBackgroundBlurPx ?? 24}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(64, Number(e.target.value) || 0));
+                  setSettings({
+                    ads: {
+                      ...a,
+                      adBackgroundBlurPx: v,
+                    },
+                  });
+                }}
+                style={{ flex: 1, accentColor: 'var(--accent)' }}
+              />
+              <input
+                type="number"
+                className="input"
+                min={0}
+                max={64}
+                step={1}
+                value={a.adBackgroundBlurPx ?? 24}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (!Number.isNaN(v)) {
+                    const clamped = Math.max(0, Math.min(64, v));
+                    setSettings({
+                      ads: {
+                        ...a,
+                        adBackgroundBlurPx: clamped,
+                      },
+                    });
+                  }
+                }}
+                style={{ width: 72, textAlign: 'center' }}
+                aria-label="Ads background blur strength"
+              />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

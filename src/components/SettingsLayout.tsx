@@ -23,7 +23,6 @@ const SETTINGS_NAV: { path: string; label: string }[] = [
   { path: '/settings/playback', label: 'Playback' },
   { path: '/settings/now-showing', label: 'Now Showing' },
   { path: '/settings/ads', label: 'Ads' },
-  { path: '/settings/arr', label: 'Arr' },
   { path: '/settings/metadata', label: 'Metadata' },
   { path: '/settings/cache', label: 'Cache' },
   { path: '/settings/backup', label: 'Backup' },
@@ -153,112 +152,108 @@ export function SettingsLayout() {
           </div>
         )}
 
-        {/* Other settings */}
-        {SETTINGS_NAV.map(({ path, label }) => (
-          <div key={path}>
-            {path === '/settings/arr' ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setArrOpen(!arrOpen)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    padding: '10px 16px',
-                    margin: '2px 8px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--text-secondary)',
-                    fontSize: 15,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span>{label}</span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      opacity: 0.7,
-                      transform: arrOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.15s ease',
-                    }}
-                  >
-                    ▶
-                  </span>
-                </button>
-                {arrOpen && (
-                  <div style={{ marginBottom: 4 }}>
-                    {[
-                      { subPath: '/settings/arr/lidarr', label: 'Lidarr', logoSrc: '/lidarr.png' },
-                      { subPath: '/settings/arr/radarr', label: 'Radarr', logoSrc: '/radarr.png' },
-                      { subPath: '/settings/arr/sonarr', label: 'Sonarr', logoSrc: '/sonarr.png' },
-                      { subPath: '/settings/arr/chaptarr', label: 'Chaptarr', logoSrc: '/chaptarr.png' },
-                    ].map(({ subPath, label: subLabel, logoSrc }) => (
-                      <NavLink
-                        key={subPath}
-                        to={subPath}
-                        end={false}
-                        style={({ isActive }) => ({
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          padding: '8px 24px',
-                          margin: '2px 8px',
-                          borderRadius: 8,
-                          color: isActive
-                            ? 'var(--text-primary)'
-                            : 'var(--text-secondary)',
-                          background: isActive
-                            ? 'var(--accent-glow)'
-                            : 'transparent',
-                          textDecoration: 'none',
-                          borderLeft: isActive
-                            ? '3px solid var(--accent)'
-                            : '3px solid transparent',
-                          fontSize: 14,
-                        })}
-                      >
-                        <img
-                          src={logoSrc}
-                          alt=""
-                          style={{
-                            height: '1.25em',
-                            width: 'auto',
-                            maxWidth: 72,
-                            objectFit: 'contain',
-                            flexShrink: 0,
-                          }}
-                        />
-                        <span>{subLabel}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
+        {/* Arr group – directly under Media servers */}
+        <button
+          type="button"
+          onClick={() => setArrOpen(!arrOpen)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '10px 16px',
+            margin: '2px 8px',
+            borderRadius: 8,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--text-secondary)',
+            fontSize: 15,
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          <span>Arr</span>
+          <span
+            style={{
+              fontSize: 12,
+              opacity: 0.7,
+              transform: arrOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.15s ease',
+            }}
+          >
+            ▶
+          </span>
+        </button>
+        {arrOpen && (
+          <div style={{ marginBottom: 4 }}>
+            {[
+              { subPath: '/settings/arr/lidarr', label: 'Lidarr', logoSrc: '/lidarr.png' },
+              { subPath: '/settings/arr/radarr', label: 'Radarr', logoSrc: '/radarr.png' },
+              { subPath: '/settings/arr/sonarr', label: 'Sonarr', logoSrc: '/sonarr.png' },
+              { subPath: '/settings/arr/chaptarr', label: 'Chaptarr', logoSrc: '/chaptarr.png' },
+            ].map(({ subPath, label: subLabel, logoSrc }) => (
               <NavLink
-                to={path}
+                key={subPath}
+                to={subPath}
                 end={false}
                 style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 24px',
                   margin: '2px 8px',
                   borderRadius: 8,
-                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  background: isActive ? 'var(--accent-glow)' : 'transparent',
+                  color: isActive
+                    ? 'var(--text-primary)'
+                    : 'var(--text-secondary)',
+                  background: isActive
+                    ? 'var(--accent-glow)'
+                    : 'transparent',
                   textDecoration: 'none',
                   borderLeft: isActive
                     ? '3px solid var(--accent)'
                     : '3px solid transparent',
+                  fontSize: 14,
                 })}
               >
-                {label}
+                <img
+                  src={logoSrc}
+                  alt=""
+                  style={{
+                    height: '1.25em',
+                    width: 'auto',
+                    maxWidth: 72,
+                    objectFit: 'contain',
+                    flexShrink: 0,
+                  }}
+                />
+                <span>{subLabel}</span>
               </NavLink>
-            )}
+            ))}
           </div>
+        )}
+
+        {/* Other settings */}
+        {SETTINGS_NAV.map(({ path, label }) => (
+          <NavLink
+            key={path}
+            to={path}
+            end={false}
+            style={({ isActive }) => ({
+              display: 'block',
+              padding: '10px 16px',
+              margin: '2px 8px',
+              borderRadius: 8,
+              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: isActive ? 'var(--accent-glow)' : 'transparent',
+              textDecoration: 'none',
+              borderLeft: isActive
+                ? '3px solid var(--accent)'
+                : '3px solid transparent',
+            })}
+          >
+            {label}
+          </NavLink>
         ))}
       </nav>
       {/* Main content area */}

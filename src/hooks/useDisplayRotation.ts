@@ -34,13 +34,8 @@ function getEnabledAds(uploads: { id: string; category: string; url: string; lab
 }
 
 /** Build now showing entries from cached media (cache-first: no direct Jellyfin). */
-async function buildNowShowingEntries(
-  theaterCount: number,
-  sourceMode: 'manual' | 'random'
-): Promise<NowShowingEntry[]> {
+async function buildNowShowingEntries(theaterCount: number): Promise<NowShowingEntry[]> {
   const entries: NowShowingEntry[] = [];
-  if (sourceMode !== 'random') return entries;
-
   const cached = await getCachedMedia('jellyfin', theaterCount * 3);
   const withPoster = onlyWithPoster(cached);
   const movieOrSeries = withPoster.filter((m) => m.type === 'Movie' || m.type === 'Series');
@@ -61,9 +56,42 @@ async function buildNowShowingEntries(
 
 export type PlaybackStatus = 'playing' | 'paused' | 'stopped' | null;
 
-export function useDisplayRotation() {
+export function useDisplayRotation(initialMode?: DisplayMode | null) {
   const { settings } = useSettings();
-  const [mode, setMode] = useState<DisplayMode>('media-showcase');
+  const jellyfin = settings.jellyfin;
+  const mediaShowcase = settings.mediaShowcase;
+  const adsSettings = settings.ads;
+  const nowShowingSettings = settings.nowShowing;
+
+  const onlyAdsEnabled =
+    adsSettings.enabled && !mediaShowcase.enabled && !nowShowingSettings.enabled;
+  const onlyNowShowingEnabled =
+    nowShowingSettings.enabled && !mediaShowcase.enabled && !adsSettings.enabled;
+  const onlyPlaybackEnabled =
+    jellyfin.playbackEnabled &&
+    !mediaShowcase.enabled &&
+    !adsSettings.enabled &&
+    !nowShowingSettings.enabled;
+  const adsAndNowShowingOnly =
+    adsSettings.enabled &&
+    nowShowingSettings.enabled &&
+    !mediaShowcase.enabled &&
+    !onlyAdsEnabled &&
+    !onlyNowShowingEnabled;
+
+  const defaultMode: DisplayMode =
+    initialMode ??
+    (onlyAdsEnabled
+      ? 'ads'
+      : onlyNowShowingEnabled
+        ? 'now-showing'
+        : adsAndNowShowingOnly
+          ? 'ads'
+          : onlyPlaybackEnabled
+            ? 'progressslide'
+            : 'media-showcase');
+
+  const [mode, setMode] = useState<DisplayMode>(defaultMode);
   const [mediaPool, setMediaPool] = useState<MediaItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [posterRotationCount, setPosterRotationCount] = useState(0);
@@ -73,15 +101,12 @@ export function useDisplayRotation() {
   const [playbackStatus, setPlaybackStatus] = useState<PlaybackStatus>(null);
   const [playingProgress, setPlayingProgress] = useState(0);
 
-  const jellyfin = settings.jellyfin;
-  const mediaShowcase = settings.mediaShowcase;
-  const adsSettings = settings.ads;
-  const nowShowingSettings = settings.nowShowing;
-
-  /** True when at least one display mode needs media from cache (showcase or now-showing random). */
+  /** True when at least one display mode needs media from cache (showcase or now-showing random/manual+fill). */
   const needsMediaCache =
     mediaShowcase.enabled ||
-    (nowShowingSettings.enabled && nowShowingSettings.sourceMode === 'random');
+    (nowShowingSettings.enabled &&
+      (nowShowingSettings.sourceMode === 'random' ||
+        nowShowingSettings.manualFillWithRandom));
 
   // Cache-first: display reads only from cache. Sources (Jellyfin, TMDb) only fill the cache.
   const loadMediaPoolFromCache = useCallback(async () => {
@@ -199,6 +224,35 @@ export function useDisplayRotation() {
     jellyfin.libraryIds.length,
   ]);
 
+  // When playback starts but media cache is empty, pull from Jellyfin right away so playback media appears.
+  useEffect(() => {
+    if (
+      (playbackStatus === 'playing' || playbackStatus === 'paused') &&
+      mediaPool.length === 0 &&
+      !syncStopped &&
+      jellyfin.enabled &&
+      jellyfin.serverUrl &&
+      jellyfin.apiKey &&
+      jellyfin.libraryIds.length
+    ) {
+      (async () => {
+        logDebug('useDisplayRotation: playback active but cache empty, pulling from Jellyfin immediately');
+        await fillCacheFromJellyfin();
+        await loadMediaPoolFromCache();
+      })();
+    }
+  }, [
+    playbackStatus,
+    mediaPool.length,
+    syncStopped,
+    jellyfin.enabled,
+    jellyfin.serverUrl,
+    jellyfin.apiKey,
+    jellyfin.libraryIds.length,
+    fillCacheFromJellyfin,
+    loadMediaPoolFromCache,
+  ]);
+
   // When user has just synced (from Jellyfin settings), refresh display from cache.
   const syncRequestedAt = settings.ui.mediaSyncRequestedAt;
   useEffect(() => {
@@ -214,11 +268,21 @@ export function useDisplayRotation() {
       setNowShowingEntries([]);
       return;
     }
-    buildNowShowingEntries(
-      nowShowingSettings.theaterCount,
-      nowShowingSettings.sourceMode
-    ).then(setNowShowingEntries);
-  }, [mode, nowShowingSettings.enabled, nowShowingSettings.theaterCount, nowShowingSettings.sourceMode]);
+    const useRandom =
+      nowShowingSettings.sourceMode === 'random' ||
+      nowShowingSettings.manualFillWithRandom;
+    if (!useRandom) {
+      setNowShowingEntries([]);
+      return;
+    }
+    buildNowShowingEntries(nowShowingSettings.theaterCount).then(setNowShowingEntries);
+  }, [
+    mode,
+    nowShowingSettings.enabled,
+    nowShowingSettings.theaterCount,
+    nowShowingSettings.sourceMode,
+    nowShowingSettings.manualFillWithRandom,
+  ]);
 
   // Ads list from uploads.
   useEffect(() => {
@@ -235,6 +299,20 @@ export function useDisplayRotation() {
   const nextMedia = mediaPool.length > 1
     ? mediaPool[(currentIndex + 1) % mediaPool.length]
     : null;
+  // A few upcoming items in pool (for preloading metadata/images ahead of time).
+  const UPCOMING_PRELOAD_COUNT = 4;
+  const upcomingMedia: MediaItem[] = [];
+  for (let offset = 1; offset <= UPCOMING_PRELOAD_COUNT && offset < mediaPool.length; offset += 1) {
+    upcomingMedia.push(mediaPool[(currentIndex + offset) % mediaPool.length]);
+  }
+
+  // Track recently shown poster indices to improve randomness (avoid repeats in short windows).
+  const [recentPosterIndices, setRecentPosterIndices] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Reset recency window when pool changes significantly.
+    setRecentPosterIndices([]);
+  }, [mediaPool.length]);
 
   // After each poster duration in media-showcase, advance to a random next poster (avoid same poster twice in a row).
   useEffect(() => {
@@ -246,17 +324,38 @@ export function useDisplayRotation() {
     const t = setTimeout(() => {
       setCurrentIndex((i) => {
         if (poolLength <= 1) return i + 1;
-        const next = Math.floor(Math.random() * poolLength);
-        return next === i ? (i + 1) % poolLength : next;
+        const recentSet = new Set<number>([i, ...recentPosterIndices]);
+        let candidate = i;
+        const maxAttempts = 10;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          const r = Math.floor(Math.random() * poolLength);
+          if (!recentSet.has(r)) {
+            candidate = r;
+            break;
+          }
+        }
+        if (candidate === i) {
+          candidate = (i + 1) % poolLength;
+        }
+        setRecentPosterIndices((prev) => {
+          const nextArr = [...prev, candidate];
+          const MAX_RECENT = 5;
+          return nextArr.slice(-MAX_RECENT);
+        });
+        return candidate;
       });
       setPosterRotationCount((c) => c + 1);
     }, duration);
     return () => clearTimeout(t);
-  }, [mode, currentMedia?.id, mediaShowcase.enabled, mediaShowcase.posterDisplaySeconds, mediaPool.length]);
+  }, [mode, currentMedia?.id, mediaShowcase.enabled, mediaShowcase.posterDisplaySeconds, mediaPool.length, recentPosterIndices]);
 
   // After N poster rotations (media-showcase cycles), switch to Ads or Now Showing.
   useEffect(() => {
     if (mode !== 'media-showcase') return;
+    if (onlyNowShowingEnabled) {
+      setMode('now-showing');
+      return;
+    }
     const interval = adsSettings.insertionIntervalPosters || 5;
     if (posterRotationCount > 0 && posterRotationCount % interval === 0) {
       if (adsSettings.enabled && adsList.length > 0) {
@@ -270,9 +369,10 @@ export function useDisplayRotation() {
   // After ads duration, return to showcase. (AdsDisplay rotates internally; we switch mode after one "cycle" or fixed time.)
   useEffect(() => {
     if (mode !== 'ads') return;
+    if (onlyAdsEnabled) return;
     const totalAdTime = adsList.length * adsSettings.adDisplaySeconds * 1000;
     const t = setTimeout(() => {
-      setMode('media-showcase');
+      setMode(adsAndNowShowingOnly ? 'now-showing' : 'media-showcase');
     }, Math.max(totalAdTime, adsSettings.adDisplaySeconds * 1000));
     return () => clearTimeout(t);
   }, [mode, adsList.length, adsSettings.adDisplaySeconds]);
@@ -283,7 +383,11 @@ export function useDisplayRotation() {
   // After now showing, go to Metapills for full duration.
   useEffect(() => {
     if (mode !== 'now-showing') return;
-    const t = setTimeout(() => setMode('metapills'), FULL_SLIDE_DURATION_MS);
+    if (onlyNowShowingEnabled) return;
+    const t = setTimeout(
+      () => setMode(adsAndNowShowingOnly ? 'ads' : 'metapills'),
+      FULL_SLIDE_DURATION_MS,
+    );
     return () => clearTimeout(t);
   }, [mode]);
 
@@ -301,6 +405,7 @@ export function useDisplayRotation() {
   // After ProgressSlide: stay on playback display while playing or paused; only leave when stopped or ended.
   useEffect(() => {
     if (mode !== 'progressslide') return;
+    if (onlyPlaybackEnabled) return;
     if (playbackStatus === 'stopped' || playingProgress >= 1) {
       setPlaybackStatus(null);
       setPlayingProgress(0);
@@ -318,6 +423,7 @@ export function useDisplayRotation() {
     mode,
     currentMedia,
     nextMedia,
+    upcomingMedia,
     nowShowingEntries,
     adsList,
     adsDurationSeconds: adsSettings.adDisplaySeconds,

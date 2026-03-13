@@ -159,16 +159,17 @@ body {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: linear-gradient(135deg, var(--jellyfin-blue), var(--jellyfin-purple));
+  border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .btn:hover {
-  background: var(--glass-highlight);
-  border-color: rgba(255, 255, 255, 0.2);
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-glow);
+  border-color: transparent;
 }
 
 .btn-primary {

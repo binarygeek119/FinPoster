@@ -1,12 +1,30 @@
 /* Ads display – full-screen image, optional label */
 
 .ads-display {
+  position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--jellyfin-dark);
+  overflow: hidden;
+}
+
+.ads-display-backdrop {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(var(--ads-blur-radius, 24px));
+  transform: scale(1.08);
+}
+
+.ads-display-backdrop-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.75));
 }
 
 .ads-display-inner {

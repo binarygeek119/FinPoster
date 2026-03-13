@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../store/settingsStore';
 import type { MediaType } from '../../types';
 
@@ -14,6 +15,7 @@ const MEDIA_TYPES: MediaType[] = ['Movie', 'Series', 'Music', 'Book'];
 
 export function NowShowingSettings() {
   const { settings, setSettings } = useSettings();
+  const navigate = useNavigate();
   const n = settings.nowShowing;
 
   const [newTmdbId, setNewTmdbId] = useState('');
@@ -85,9 +87,21 @@ export function NowShowingSettings() {
 
       {tab === 'main' && (
         <>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
         Configure the theater showtime board: where entries come from and how showtimes are generated.
       </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          Quickly preview how the Now Showing board looks on the main display.
+        </span>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => navigate('/?mode=now-showing')}
+        >
+          Test Now Showing on display
+        </button>
+      </div>
 
       <div
         style={{
@@ -147,6 +161,32 @@ export function NowShowingSettings() {
         <option value="manual">Manual IDs only</option>
         <option value="random">Random from server libraries</option>
       </select>
+      {n.sourceMode === 'manual' && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid var(--glass-border)',
+          }}
+        >
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <input
+              type="checkbox"
+              checked={n.manualFillWithRandom ?? false}
+              onChange={(e) =>
+                setSettings({
+                  nowShowing: { ...n, manualFillWithRandom: e.target.checked },
+                })
+              }
+            />
+            <span>
+              Also fill remaining rows with random items from server libraries
+            </span>
+          </label>
+        </div>
+      )}
 
       <h2 style={{ marginTop: 24 }}>Manual TMDb IDs</h2>
       <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 8 }}>
