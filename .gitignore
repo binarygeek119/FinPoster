@@ -14,8 +14,11 @@ dist-ssr
 
 # App runtime data (not for git)
 cache/
+cache/**
 data/
+data/**
 uploads/
+uploads/**
 
 # Editor directories and files
 .vscode/*
