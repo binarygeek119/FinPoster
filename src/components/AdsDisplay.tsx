@@ -55,11 +55,6 @@ export function AdsDisplay({ ads, durationSeconds }: AdsDisplayProps) {
               className="ads-display-poster-img"
             />
           </div>
-          {ad.label && (
-            <div className="ads-display-label-bar">
-              <span className="ads-display-label-text">{ad.label}</span>
-            </div>
-          )}
           {ad.prices && ad.prices.length > 0 && (
             <div className="ads-display-prices glass-panel">
               {ad.prices.map((line, i) => (

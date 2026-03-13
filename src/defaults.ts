@@ -55,6 +55,8 @@ export const DEFAULT_ACCENT_HEX = '#00a4dc';
 export const DEFAULT_TICKER_COLOR = '#ffffff';
 export const DEFAULT_HOME_CINEMA_TITLE_COLOR = '#ff0000';
 export const DEFAULT_TIME_PILL_COLOR = '#eef207';
+export const DEFAULT_PLAYBACK_TIME_COLOR = '#17f207';
+export const DEFAULT_PLAYBACK_END_TIME_COLOR = '#f20707';
 
 /** Light gray used for all display colors when color mode is "mono". */
 export const MONO_GRAY = '#c0c0c0';
@@ -77,8 +79,8 @@ export const defaultMediaShowcase = {
   backdropBlurPx: 18,
   tickerColor: DEFAULT_TICKER_COLOR,
   timePillColor: DEFAULT_TIME_PILL_COLOR,
-  playbackTimeColor: DEFAULT_TIME_PILL_COLOR,
-  playbackEndTimeColor: DEFAULT_TIME_PILL_COLOR,
+  playbackTimeColor: DEFAULT_PLAYBACK_TIME_COLOR,
+  playbackEndTimeColor: DEFAULT_PLAYBACK_END_TIME_COLOR,
   progressBarColor: DEFAULT_ACCENT_HEX,
   displayFont: 'default',
   homeCinemaFont: 'default',
