@@ -6,7 +6,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Install dependencies (dev + prod) to build
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./ 2>/dev/null || true
+COPY package.json package-lock.json ./
 RUN npm install
 
 # Copy source
@@ -21,7 +21,7 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 
 # Only install production dependencies
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./ 2>/dev/null || true
+COPY package.json package-lock.json ./
 RUN npm install --omit=dev
 
 # Copy built frontend and server code
