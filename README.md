@@ -1,4 +1,4 @@
-https://github.com/binarygeek119/FinPoster/blob/main/public/hero.png?raw=true
+(https://github.com/binarygeek119/FinPoster/blob/main/public/hero.png?raw=true)
 
 # FinPoster – Digital Signage Display System
 
