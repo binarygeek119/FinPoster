@@ -117,30 +117,6 @@ export async function getCachedMedia(
   }));
 }
 
-/** Jellyfin library (we need Id and Name). */
-interface JFLibrary {
-  Id?: string;
-  Name?: string;
-  CollectionType?: string;
-}
-
-/** Jellyfin item from /Items endpoint. */
-interface JFItem {
-  Id?: string;
-  Name?: string;
-  Type?: string;
-  Taglines?: string[];
-  Overview?: string;
-  ProductionYear?: number;
-  CommunityRating?: number;
-  Studios?: { Name?: string }[];
-  ProviderIds?: { Tmdb?: string; Tvdb?: string };
-  ImageTags?: { Primary?: string; Backdrop?: string[]; Logo?: string };
-  SeriesName?: string;
-  AlbumArtist?: string;
-  People?: { Name?: string; Type?: string }[];
-}
-
 /** Get libraries for the server (used in settings to let user pick which to use). */
 export async function getJellyfinLibraries(
   serverUrl: string,
@@ -216,10 +192,10 @@ export async function getJellyfinLibraryItems(
  * Get a single item by ID (e.g. for "currently playing" or manual ID lookup).
  */
 export async function getJellyfinItem(
-  serverUrl: string,
-  apiKey: string,
-  itemId: string,
-  userId?: string
+  _serverUrl: string,
+  _apiKey: string,
+  _itemId: string,
+  _userId?: string
 ): Promise<MediaItem | null> {
   // For now, just re-use the client-side fetch path if needed or return null.
   // Backend does not yet expose a single-item endpoint.
@@ -231,9 +207,9 @@ export async function getJellyfinItem(
  * playing media in Media Showcase. Returns item IDs or null if not implemented.
  */
 export async function getNowPlayingItemIds(
-  serverUrl: string,
-  apiKey: string,
-  userId: string
+  _serverUrl: string,
+  _apiKey: string,
+  _userId: string
 ): Promise<string[]> {
   // Not yet proxied; keep using direct Jellyfin when we add Now Playing support.
   return [];
