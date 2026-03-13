@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "server": "node server/index.mjs",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:comicvine": "node scripts/test-comicvine-key.cjs"
   },
   "dependencies": {
+    "better-sqlite3": "^11.9.0",
+    "express": "^5.1.0",
+    "multer": "^1.4.5-lts.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1"

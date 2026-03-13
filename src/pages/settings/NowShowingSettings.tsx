@@ -6,6 +6,7 @@
  * or random). Same glass styling as other settings.
  */
 
+import { useState } from 'react';
 import { useSettings } from '../../store/settingsStore';
 import type { MediaType } from '../../types';
 
@@ -15,9 +16,19 @@ export function NowShowingSettings() {
   const { settings, setSettings } = useSettings();
   const n = settings.nowShowing;
 
+  const [newTmdbId, setNewTmdbId] = useState('');
+  const [newTvdbId, setNewTvdbId] = useState('');
+
   const addTmdbId = () => {
-    const next = prompt('Enter TMDb movie or TV ID:');
-    if (next) setSettings({ nowShowing: { ...n, manualTmdbIds: [...n.manualTmdbIds, next.trim()] } });
+    const trimmed = newTmdbId.trim();
+    if (!trimmed) return;
+    setSettings({
+      nowShowing: {
+        ...n,
+        manualTmdbIds: [...n.manualTmdbIds, trimmed],
+      },
+    });
+    setNewTmdbId('');
   };
   const removeTmdbId = (idx: number) => {
     setSettings({
@@ -29,8 +40,15 @@ export function NowShowingSettings() {
   };
 
   const addTvdbId = () => {
-    const next = prompt('Enter TheTVDB series ID:');
-    if (next) setSettings({ nowShowing: { ...n, manualTvdbIds: [...n.manualTvdbIds, next.trim()] } });
+    const trimmed = newTvdbId.trim();
+    if (!trimmed) return;
+    setSettings({
+      nowShowing: {
+        ...n,
+        manualTvdbIds: [...n.manualTvdbIds, trimmed],
+      },
+    });
+    setNewTvdbId('');
   };
   const removeTvdbId = (idx: number) => {
     setSettings({
@@ -47,6 +65,51 @@ export function NowShowingSettings() {
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         Configure the theater showtime board: where entries come from and how showtimes are generated.
       </p>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <span>Enable Now Showing board</span>
+        <button
+          type="button"
+          onClick={() =>
+            setSettings({
+              nowShowing: { ...n, enabled: !n.enabled },
+            })
+          }
+          aria-pressed={n.enabled}
+          style={{
+            position: 'relative',
+            width: 46,
+            height: 24,
+            borderRadius: 999,
+            border: '1px solid var(--glass-border)',
+            background: n.enabled ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: n.enabled ? 24 : 2,
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              background: '#ffffff',
+              boxShadow: '0 0 6px rgba(0,0,0,0.4)',
+              transition: 'left 0.18s ease',
+            }}
+          />
+        </button>
+      </div>
 
       <h2>Source mode</h2>
       <select
@@ -76,9 +139,18 @@ export function NowShowingSettings() {
           </li>
         ))}
       </ul>
-      <button type="button" className="btn btn-primary" onClick={addTmdbId} style={{ marginTop: 8 }}>
-        Add TMDb ID
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <input
+          type="text"
+          className="input"
+          placeholder="TMDb ID (e.g. 603)"
+          value={newTmdbId}
+          onChange={(e) => setNewTmdbId(e.target.value)}
+        />
+        <button type="button" className="btn btn-primary" onClick={addTmdbId}>
+          Add
+        </button>
+      </div>
 
       <h2 style={{ marginTop: 24 }}>Manual TheTVDB IDs</h2>
       <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 8 }}>
@@ -94,9 +166,18 @@ export function NowShowingSettings() {
           </li>
         ))}
       </ul>
-      <button type="button" className="btn btn-primary" onClick={addTvdbId} style={{ marginTop: 8 }}>
-        Add TheTVDB ID
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <input
+          type="text"
+          className="input"
+          placeholder="TheTVDB ID"
+          value={newTvdbId}
+          onChange={(e) => setNewTvdbId(e.target.value)}
+        />
+        <button type="button" className="btn btn-primary" onClick={addTvdbId}>
+          Add
+        </button>
+      </div>
 
       <label style={{ display: 'block', marginTop: 24, marginBottom: 8 }}>
         Media type for entries

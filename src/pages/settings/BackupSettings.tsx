@@ -8,6 +8,7 @@
 import { useRef } from 'react';
 import { useSettings } from '../../store/settingsStore';
 import { SETTINGS_STORAGE_KEY } from '../../defaults';
+import { backendBaseUrl } from '../../services/uploadClient';
 
 export function BackupSettings() {
   const { settings } = useSettings();
@@ -58,6 +59,20 @@ export function BackupSettings() {
           <button type="button" className="btn btn-primary" onClick={downloadBackup}>
             Download settings backup
           </button>
+        </div>
+        <div>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              window.open(`${backendBaseUrl()}/api/db/backup`, '_blank');
+            }}
+          >
+            Download database backup
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+            Downloads the internal SQLite database file used for media cache and sources.
+          </p>
         </div>
         <div>
           <input

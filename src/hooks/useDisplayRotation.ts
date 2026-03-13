@@ -35,7 +35,8 @@ async function buildNowShowingEntries(
   _manualTmdbIds: string[],
   _manualTvdbIds: string[],
   theaterCount: number,
-  sourceMode: 'manual' | 'random'
+  sourceMode: 'manual' | 'random',
+  userId?: string
 ): Promise<NowShowingEntry[]> {
   const entries: NowShowingEntry[] = [];
   const usedIds = new Set<string>();
@@ -49,7 +50,8 @@ async function buildNowShowingEntries(
         jellyfinKey,
         libId,
         ['Movie', 'Series'],
-        theaterCount * 2
+        theaterCount * 2,
+        userId
       );
       for (const item of items) {
         if (entries.length >= theaterCount) break;
@@ -87,7 +89,13 @@ export function useDisplayRotation() {
 
   // Load media pool from Jellyfin (and optionally enrich with TMDb).
   const loadMediaPool = useCallback(async () => {
-    if (!jellyfin.serverUrl || !jellyfin.apiKey || !jellyfin.libraryIds.length) {
+    if (
+      !mediaShowcase.enabled ||
+      !jellyfin.enabled ||
+      !jellyfin.serverUrl ||
+      !jellyfin.apiKey ||
+      !jellyfin.libraryIds.length
+    ) {
       setMediaPool([]);
       return;
     }
@@ -98,7 +106,8 @@ export function useDisplayRotation() {
         jellyfin.apiKey,
         libId,
         jellyfin.enabledMediaTypes,
-        50
+        50,
+        jellyfin.playbackUserId
       );
       all.push(...items);
     }
@@ -113,7 +122,7 @@ export function useDisplayRotation() {
     }
     setMediaPool(all);
     setCurrentIndex(0);
-  }, [jellyfin.serverUrl, jellyfin.apiKey, jellyfin.libraryIds, jellyfin.enabledMediaTypes, settings.metadata.tmdbApiKey]);
+  }, [jellyfin.serverUrl, jellyfin.apiKey, jellyfin.libraryIds, jellyfin.enabledMediaTypes, jellyfin.playbackUserId, settings.metadata.tmdbApiKey]);
 
   useEffect(() => {
     loadMediaPool();
@@ -124,6 +133,10 @@ export function useDisplayRotation() {
   // Build now showing list when we need it.
   useEffect(() => {
     if (mode !== 'now-showing') return;
+    if (!nowShowingSettings.enabled || !jellyfin.enabled) {
+      setNowShowingEntries([]);
+      return;
+    }
     buildNowShowingEntries(
       jellyfin.serverUrl,
       jellyfin.apiKey,
@@ -131,9 +144,10 @@ export function useDisplayRotation() {
       nowShowingSettings.manualTmdbIds,
       nowShowingSettings.manualTvdbIds,
       nowShowingSettings.theaterCount,
-      nowShowingSettings.sourceMode
+      nowShowingSettings.sourceMode,
+      jellyfin.playbackUserId
     ).then(setNowShowingEntries);
-  }, [mode, jellyfin.serverUrl, jellyfin.apiKey, jellyfin.libraryIds, nowShowingSettings.manualTmdbIds, nowShowingSettings.manualTvdbIds, nowShowingSettings.theaterCount, nowShowingSettings.sourceMode]);
+  }, [mode, jellyfin.serverUrl, jellyfin.apiKey, jellyfin.libraryIds, jellyfin.playbackUserId, nowShowingSettings.manualTmdbIds, nowShowingSettings.manualTvdbIds, nowShowingSettings.theaterCount, nowShowingSettings.sourceMode]);
 
   // Ads list from uploads.
   useEffect(() => {
@@ -150,6 +164,7 @@ export function useDisplayRotation() {
   // After each poster duration, advance index and maybe switch mode.
   useEffect(() => {
     if (mode !== 'media-showcase') return;
+    if (!mediaShowcase.enabled) return;
     if (!currentMedia) return;
     const duration = mediaShowcase.posterDisplaySeconds * 1000;
     const t = setTimeout(() => {
@@ -157,7 +172,7 @@ export function useDisplayRotation() {
       setPosterRotationCount((c) => c + 1);
     }, duration);
     return () => clearTimeout(t);
-  }, [mode, currentMedia?.id, mediaShowcase.posterDisplaySeconds]);
+  }, [mode, currentMedia?.id, mediaShowcase.enabled, mediaShowcase.posterDisplaySeconds]);
 
   // After N poster rotations, switch to Ads (if enabled and have ads) or Now Showing.
   useEffect(() => {

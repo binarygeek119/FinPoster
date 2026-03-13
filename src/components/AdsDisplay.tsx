@@ -43,6 +43,16 @@ export function AdsDisplay({ ads, durationSeconds }: AdsDisplayProps) {
         {ad.label && (
           <span className="ads-display-label glass-panel">{ad.label}</span>
         )}
+        {ad.prices && ad.prices.length > 0 && (
+          <div className="ads-display-prices glass-panel">
+            {ad.prices.map((line, i) => (
+              <div key={i} className="ads-display-price-line">
+                <span className="ads-display-price-label">{line.label}</span>
+                <span className="ads-display-price-value">{line.price}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

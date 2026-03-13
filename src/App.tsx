@@ -20,8 +20,10 @@ import { NowShowingSettings } from './pages/settings/NowShowingSettings';
 import { AdsSettings } from './pages/settings/AdsSettings';
 import { MetadataSettings } from './pages/settings/MetadataSettings';
 import { CacheSettings } from './pages/settings/CacheSettings';
-import { UploadSettings } from './pages/settings/UploadSettings';
 import { BackupSettings } from './pages/settings/BackupSettings';
+import { AboutSettings } from './pages/settings/AboutSettings';
+import { PlaybackSettings } from './pages/settings/PlaybackSettings';
+import { ArrSettings } from './pages/settings/ArrSettings';
 import './index.css';
 
 function App() {
@@ -37,6 +39,7 @@ function App() {
             <Route index element={<Navigate to="/settings/general" replace />} />
             <Route path="general" element={<GeneralSettings />} />
             <Route path="jellyfin" element={<JellyfinSettings />} />
+            <Route path="playback" element={<PlaybackSettings />} />
             <Route path="plex" element={<PlexSettings />} />
             <Route path="emby" element={<EmbySettings />} />
             <Route path="media-showcase" element={<MediaShowcaseSettings />} />
@@ -44,8 +47,12 @@ function App() {
             <Route path="ads" element={<AdsSettings />} />
             <Route path="metadata" element={<MetadataSettings />} />
             <Route path="cache" element={<CacheSettings />} />
-            <Route path="uploads" element={<UploadSettings />} />
             <Route path="backup" element={<BackupSettings />} />
+            <Route path="arr">
+              <Route index element={<ArrSettings />} />
+              <Route path=":tab" element={<ArrSettings />} />
+            </Route>
+            <Route path="about" element={<AboutSettings />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

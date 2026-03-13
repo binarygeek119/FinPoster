@@ -11,26 +11,27 @@
 import type { MediaItem } from '../types';
 import { cacheService } from './cache';
 
-/** TMDb config response (base URL for images). */
-let tmdbImageBase: string | null = null;
+const DEV_BACKEND_BASE = 'http://localhost:3000';
 
-async function getTmdbConfig(apiKey: string): Promise<string | null> {
-  if (tmdbImageBase) return tmdbImageBase;
-  try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/configuration?api_key=${apiKey}`
-    );
-    const data = await res.json();
-    const base = data?.images?.secure_base_url;
-    const size = data?.images?.poster_sizes?.find((s: string) => s === 'w500') || 'w500';
-    if (base) {
-      tmdbImageBase = `${base}${size}`;
-      return tmdbImageBase;
-    }
-  } catch {
-    // ignore
+function backendBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    return DEV_BACKEND_BASE;
   }
-  return null;
+  return window.location.origin;
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T | null> {
+  try {
+    const res = await fetch(`${backendBaseUrl()}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -54,34 +55,19 @@ export async function enrichFromTmdb(
     }
   }
 
-  const type = item.type === 'Series' ? 'tv' : 'movie';
-  try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&language=en-US`
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const base = await getTmdbConfig(apiKey);
-    const posterPath = data.poster_path;
-    const backdropPath = data.backdrop_path;
-    const update: Partial<MediaItem> = {
-      tagline: item.tagline || data.tagline || undefined,
-      plot: item.plot || data.overview || undefined,
-      year: item.year || (data.release_date || data.first_air_date || '').slice(0, 4) ? parseInt((data.release_date || data.first_air_date || '').slice(0, 4), 10) : undefined,
-    };
-    if (base && posterPath) {
-      update.posterUrl = base + posterPath;
-      cacheService.set(cacheBucket, cacheKey + '_poster', update.posterUrl);
-    }
-    if (base && backdropPath) {
-      update.backdropUrl = `https://image.tmdb.org/t/p/original${backdropPath}`;
-      cacheService.set('backdrop', cacheKey + '_backdrop', update.backdropUrl);
-    }
-    cacheService.set('metadata', cacheKey, JSON.stringify(update));
-    return update;
-  } catch {
-    return null;
+  const update = await postJson<Partial<MediaItem>>('/api/metadata/tmdb/enrich', {
+    apiKey,
+    item,
+  });
+  if (!update) return null;
+  cacheService.set('metadata', cacheKey, JSON.stringify(update));
+  if (update.posterUrl) {
+    cacheService.set(cacheBucket, cacheKey + '_poster', update.posterUrl);
   }
+  if (update.backdropUrl) {
+    cacheService.set('backdrop', cacheKey + '_backdrop', update.backdropUrl);
+  }
+  return update;
 }
 
 /**
@@ -90,9 +76,101 @@ export async function enrichFromTmdb(
  * so the fallback chain continues to default poster.
  */
 export async function enrichFromTvdb(
-  _apiKey: string,
-  _item: MediaItem
+  apiKey: string,
+  item: MediaItem
 ): Promise<Partial<MediaItem> | null> {
-  // TODO: implement TheTVDB v4 auth and lookup when needed
-  return null;
+  if (!apiKey || !item.tvdbId) return null;
+  const cacheKey = `tvdb_${item.tvdbId}`;
+  const cached = cacheService.get('metadata', cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached) as Partial<MediaItem>;
+    } catch {
+      // ignore
+    }
+  }
+  const update = await postJson<Partial<MediaItem>>('/api/metadata/tvdb/enrich', {
+    apiKey,
+    item,
+  });
+  if (!update) return null;
+  cacheService.set('metadata', cacheKey, JSON.stringify(update));
+  return update;
+}
+
+/**
+ * Google Books – used mainly for Book items when the primary source is missing
+ * metadata like description, publisher, author image, etc. We use volume search
+ * by title and author. API key is optional but recommended.
+ */
+export async function enrichFromGoogleBooks(
+  apiKey: string,
+  item: MediaItem
+): Promise<Partial<MediaItem> | null> {
+  if (item.type !== 'Book') return null;
+  const cacheKey = `gbooks_${item.id}`;
+  const cached = cacheService.get('metadata', cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached) as Partial<MediaItem>;
+    } catch {
+      // ignore
+    }
+  }
+
+  const update = await postJson<Partial<MediaItem>>(
+    '/api/metadata/googlebooks/enrich',
+    { apiKey, item }
+  );
+  if (!update) return null;
+  cacheService.set('metadata', cacheKey, JSON.stringify(update));
+  return update;
+}
+
+/**
+ * Comic Vine – placeholder for comics/graphic novels metadata.
+ *
+ * The public Comic Vine API normally expects requests from server-side code
+ * (with JSONP or CORS headers), so browser-based fetches are unreliable and can
+ * easily fail due to CORS even when the key is valid. To avoid confusing users,
+ * we proxy tests through the FinPoster backend instead of calling from the browser.
+ */
+export async function testComicVineApiKey(
+  apiKey: string
+): Promise<boolean> {
+  if (!apiKey) return false;
+  const data = await postJson<{ ok: boolean }>(
+    '/api/metadata/comicvine/test',
+    { apiKey }
+  );
+  return !!data?.ok;
+}
+
+/**
+ * Simple key tests for TMDb and Google Books so the Metadata page can
+ * give quick feedback when the user hits \"Test API keys\".
+ */
+export async function testTmdbApiKey(apiKey: string): Promise<boolean> {
+  if (!apiKey) return false;
+  const data = await postJson<{ ok: boolean }>('/api/metadata/tmdb/test', {
+    apiKey,
+  });
+  return !!data?.ok;
+}
+
+export async function testGoogleBooksApiKey(apiKey: string): Promise<boolean> {
+  const data = await postJson<{ ok: boolean }>(
+    '/api/metadata/googlebooks/test',
+    { apiKey }
+  );
+  return !!data?.ok;
+}
+
+export async function testTvdbApiKey(apiKey: string): Promise<boolean> {
+  if (!apiKey) return false;
+  const data = await postJson<{ ok: boolean }>(
+    '/api/metadata/tvdb/test',
+    { apiKey }
+  );
+  return !!data?.ok;
 }
