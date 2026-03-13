@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { initDb, getMediaItems, getMediaItemCount, upsertMediaItems } from './db.mjs';
+import { initDb, getMediaItems, getMediaItemCount, upsertMediaItems, clearMediaItems } from './db.mjs';
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -158,6 +158,53 @@ app.use('/uploads', express.static(uploadsDir));
 
 // On-disk image cache (posters, backdrops, logos)
 app.use('/cache', express.static(cacheDir));
+
+// Return file count per bucket in the cache folder (so cache menu count matches on-disk images)
+app.get('/api/cache/count', (req, res) => {
+  try {
+    const counts = {};
+    for (const bucket of IMAGE_CACHE_BUCKETS) {
+      const dir = path.join(cacheDir, bucket);
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir).filter((f) => {
+          const p = path.join(dir, f);
+          try {
+            return fs.statSync(p).isFile();
+          } catch {
+            return false;
+          }
+        });
+        counts[bucket] = files.length;
+      } else {
+        counts[bucket] = 0;
+      }
+    }
+    res.json(counts);
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
+// Clear all cache: delete on-disk cache files and media_items table (frontend also clears localStorage)
+app.post('/api/cache/clear', (req, res) => {
+  try {
+    for (const bucket of IMAGE_CACHE_BUCKETS) {
+      const dir = path.join(cacheDir, bucket);
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir);
+        for (const f of files) {
+          try {
+            fs.unlinkSync(path.join(dir, f));
+          } catch (_) {}
+        }
+      }
+    }
+    clearMediaItems();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
 
 // ==== Jellyfin proxy APIs ====
 

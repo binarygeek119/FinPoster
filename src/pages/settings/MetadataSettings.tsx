@@ -129,86 +129,110 @@ export function MetadataSettings() {
         When on, missing posters and metadata are filled from TMDb, TheTVDB, Google Books, and Comic Vine when keys are set.
       </p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
         <img
           src={tmdbLogo}
           alt="TMDb"
-          style={{ width: 80, height: 28, objectFit: 'contain' }}
+          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <label style={{ flex: 1 }}>TMDb API key</label>
-      </div>
-      <input
-        type="password"
-        className="input input-password"
-        placeholder="••••••••"
-        value={m.tmdbApiKey}
-        onChange={(e) =>
-          setSettings({ metadata: { ...m, tmdbApiKey: e.target.value } })
-        }
-      />
+        <input
+          type="password"
+          className="input input-password"
+          placeholder="••••••••"
+          value={m.tmdbApiKey}
+          onChange={(e) =>
+            setSettings({ metadata: { ...m, tmdbApiKey: e.target.value } })
+          }
+          style={{ flex: 1, minWidth: 0 }}
+        />
+      </label>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
         Get a key at themoviedb.org (free).
       </p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, marginBottom: 8 }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginTop: 16,
+          marginBottom: 8,
+        }}
+      >
         <img
           src={tvdbLogo}
           alt="TheTVDB"
-          style={{ width: 80, height: 28, objectFit: 'contain' }}
+          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <label style={{ flex: 1 }}>TheTVDB API key</label>
-      </div>
-      <input
-        type="password"
-        className="input input-password"
-        placeholder="••••••••"
-        value={m.tvdbApiKey}
-        onChange={(e) =>
-          setSettings({ metadata: { ...m, tvdbApiKey: e.target.value } })
-        }
-      />
+        <input
+          type="password"
+          className="input input-password"
+          placeholder="••••••••"
+          value={m.tvdbApiKey}
+          onChange={(e) =>
+            setSettings({ metadata: { ...m, tvdbApiKey: e.target.value } })
+          }
+          style={{ flex: 1, minWidth: 0 }}
+        />
+      </label>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
         Get a key at thetvdb.com (free).
       </p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, marginBottom: 8 }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginTop: 16,
+          marginBottom: 8,
+        }}
+      >
         <img
           src={googleBooksLogo}
           alt="Google Books"
-          style={{ width: 80, height: 28, objectFit: 'contain' }}
+          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <label style={{ flex: 1 }}>Google Books API key</label>
-      </div>
-      <input
-        type="password"
-        className="input input-password"
-        placeholder="••••••••"
-        value={m.googleBooksApiKey}
-        onChange={(e) =>
-          setSettings({ metadata: { ...m, googleBooksApiKey: e.target.value } })
-        }
-      />
+        <input
+          type="password"
+          className="input input-password"
+          placeholder="••••••••"
+          value={m.googleBooksApiKey}
+          onChange={(e) =>
+            setSettings({ metadata: { ...m, googleBooksApiKey: e.target.value } })
+          }
+          style={{ flex: 1, minWidth: 0 }}
+        />
+      </label>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
         Optional – get a key at console.cloud.google.com (Google Books API).
       </p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, marginBottom: 8 }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginTop: 16,
+          marginBottom: 8,
+        }}
+      >
         <img
           src={comicVineLogo}
           alt="Comic Vine"
-          style={{ width: 96, height: 28, objectFit: 'contain' }}
+          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <label style={{ flex: 1 }}>Comic Vine API key</label>
-      </div>
-      <input
-        type="password"
-        className="input input-password"
-        placeholder="••••••••"
-        value={m.comicVineApiKey}
-        onChange={(e) =>
-          setSettings({ metadata: { ...m, comicVineApiKey: e.target.value } })
-        }
-      />
+        <input
+          type="password"
+          className="input input-password"
+          placeholder="••••••••"
+          value={m.comicVineApiKey}
+          onChange={(e) =>
+            setSettings({ metadata: { ...m, comicVineApiKey: e.target.value } })
+          }
+          style={{ flex: 1, minWidth: 0 }}
+        />
+      </label>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
         Get a key at comicvine.gamespot.com/api.
       </p>

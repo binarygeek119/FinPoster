@@ -9,6 +9,8 @@ import {
   DEFAULT_TICKER_COLOR,
   DEFAULT_HOME_CINEMA_TITLE_COLOR,
   DEFAULT_TIME_PILL_COLOR,
+  DEFAULT_PLAYBACK_TIME_COLOR,
+  DEFAULT_PLAYBACK_END_TIME_COLOR,
   DEFAULT_ACCENT_HEX,
 } from '../defaults';
 
@@ -30,6 +32,9 @@ export interface EffectiveDisplayColors {
   homeCinemaTitleColor: string;
   tickerColor: string;
   timePillColor: string;
+  playbackTimeColor: string;
+  playbackEndTimeColor: string;
+  progressBarColor: string;
   accentColor: string;
   metapillsColors: Record<string, string>;
 }
@@ -51,6 +56,9 @@ function getColorfulDefaults(): EffectiveDisplayColors {
     homeCinemaTitleColor: DEFAULT_HOME_CINEMA_TITLE_COLOR,
     tickerColor: DEFAULT_TICKER_COLOR,
     timePillColor: DEFAULT_TIME_PILL_COLOR,
+    playbackTimeColor: DEFAULT_PLAYBACK_TIME_COLOR,
+    playbackEndTimeColor: DEFAULT_PLAYBACK_END_TIME_COLOR,
+    progressBarColor: DEFAULT_ACCENT_HEX,
     accentColor: DEFAULT_ACCENT_HEX,
     metapillsColors: { ...COLORFUL_METAPILLS },
   };
@@ -75,6 +83,9 @@ export function getEffectiveDisplayColors(
       homeCinemaTitleColor: gray,
       tickerColor: gray,
       timePillColor: gray,
+      playbackTimeColor: gray,
+      playbackEndTimeColor: gray,
+      progressBarColor: gray,
       accentColor: gray,
       metapillsColors: Object.fromEntries(METAPILL_KEYS.map((k) => [k, gray])),
     };
@@ -88,6 +99,18 @@ export function getEffectiveDisplayColors(
     homeCinemaTitleColor: opts.homeCinemaTitleColor ?? opts.tickerColor ?? '#ff0000',
     tickerColor: opts.tickerColor ?? '#ffffff',
     timePillColor: opts.timePillColor ?? opts.tickerColor ?? '#eef207',
+    playbackTimeColor:
+      opts.playbackTimeColor ??
+      opts.timePillColor ??
+      opts.tickerColor ??
+      DEFAULT_PLAYBACK_TIME_COLOR,
+    playbackEndTimeColor:
+      opts.playbackEndTimeColor ??
+      opts.playbackTimeColor ??
+      opts.timePillColor ??
+      opts.tickerColor ??
+      DEFAULT_PLAYBACK_END_TIME_COLOR,
+    progressBarColor: opts.progressBarColor ?? opts.accentColor ?? DEFAULT_ACCENT_HEX,
     accentColor: opts.accentColor ?? '#00a4dc',
     metapillsColors: opts.metapillsColors ?? {},
   };

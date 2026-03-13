@@ -7,6 +7,7 @@
  */
 
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { DisplayViewportBackdropProvider } from '../context/DisplayViewportBackdrop';
 import { DisplayLayout } from '../components/DisplayLayout';
 import { MediaShowcase } from '../components/MediaShowcase';
@@ -14,7 +15,8 @@ import { NowShowing } from '../components/NowShowing';
 import { AdsDisplay } from '../components/AdsDisplay';
 import { FallbackDisplay } from '../components/FallbackDisplay';
 import { Metapills } from '../components/Metapills';
-import { ProgressSlide, hasPlayback } from '../components/ProgressSlide';
+import { hasPlayback } from '../components/ProgressSlide';
+import { PlaybackDisplay } from '../components/PlaybackDisplay';
 import { useDisplayRotation } from '../hooks/useDisplayRotation';
 import { useSettings } from '../store/settingsStore';
 import { resolveAssetUrl } from '../services/jellyfin';
@@ -27,29 +29,48 @@ function preloadImage(url: string) {
 }
 
 export function DisplayPage() {
+  const location = useLocation();
   const { settings } = useSettings();
+  const search = new URLSearchParams(location.search);
+  const modeParam = search.get('mode');
+  const initialMode =
+    modeParam === 'ads'
+      ? 'ads'
+      : modeParam === 'now-showing'
+        ? 'now-showing'
+        : undefined;
   const {
     mode,
     currentMedia,
     nextMedia,
+    upcomingMedia,
     nowShowingEntries,
     adsList,
     adsDurationSeconds,
     showFallback,
     playingProgress,
-  } = useDisplayRotation();
-  const showProgressSlide = hasPlayback(currentMedia);
+  } = useDisplayRotation(initialMode);
+  // In progressslide mode, show playback UI: use item with playback times (real or synthetic).
+  const playbackDisplayItem =
+    mode === 'progressslide' && currentMedia
+      ? hasPlayback(currentMedia)
+        ? currentMedia
+        : { ...currentMedia, playbackStartTime: 0, playbackEndTime: 7200 }
+      : null;
 
-  // Preload next media item's poster, backdrop, and logo so the next slide is ready.
+  // Preload upcoming media posters/backdrops/logos so the next few slides are ready.
   useEffect(() => {
-    if (!nextMedia) return;
-    const poster = resolveAssetUrl(nextMedia.posterUrl);
-    const backdrop = resolveAssetUrl(nextMedia.backdropUrl);
-    const logo = resolveAssetUrl(nextMedia.logoUrl);
-    if (poster) preloadImage(poster);
-    if (backdrop) preloadImage(backdrop);
-    if (logo) preloadImage(logo);
-  }, [nextMedia?.id]);
+    const list = [nextMedia, ...(upcomingMedia ?? [])].filter(Boolean);
+    if (!list.length) return;
+    for (const item of list) {
+      const poster = resolveAssetUrl(item!.posterUrl);
+      const backdrop = resolveAssetUrl(item!.backdropUrl);
+      const logo = resolveAssetUrl(item!.logoUrl);
+      if (poster) preloadImage(poster);
+      if (backdrop) preloadImage(backdrop);
+      if (logo) preloadImage(logo);
+    }
+  }, [nextMedia?.id, upcomingMedia?.map((m) => m.id).join(',')]);
 
   // Never leave the display blank: when a mode has no content, show FallbackDisplay.
   const content =
@@ -71,8 +92,8 @@ export function DisplayPage() {
       <Metapills item={currentMedia} pillColors={getEffectiveDisplayColors(settings.mediaShowcase).metapillsColors} />
     ) : mode === 'metapills' ? (
       <FallbackDisplay />
-    ) : mode === 'progressslide' && showProgressSlide ? (
-      <ProgressSlide item={currentMedia} progress={playingProgress} />
+    ) : mode === 'progressslide' && playbackDisplayItem ? (
+      <PlaybackDisplay item={playbackDisplayItem} progress={playingProgress} />
     ) : mode === 'progressslide' ? (
       <FallbackDisplay />
     ) : (

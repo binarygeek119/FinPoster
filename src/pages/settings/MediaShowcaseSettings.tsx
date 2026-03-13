@@ -539,7 +539,7 @@ export function MediaShowcaseSettings() {
             </div>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 8 }}>Time pill text color</label>
+            <label style={{ display: 'block', marginBottom: 8 }}>Current time text color</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="color"

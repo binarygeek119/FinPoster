@@ -21,11 +21,16 @@ const BUCKET_LABELS: Record<CacheBucket, string> = {
   photos: 'Photos',
 };
 
+/** Server cache folder has no "metadata" bucket (metadata is localStorage only). */
+const SERVER_CACHE_BUCKETS: CacheBucket[] = ['primary', 'logo', 'people', 'backdrop', 'music', 'photos'];
+
 export function CacheSettings() {
   const { setSettings } = useSettings();
   const [refreshKey, setRefreshKey] = useState(0);
   const [mediaCacheCount, setMediaCacheCount] = useState<number | null>(null);
   const [mediaCountError, setMediaCountError] = useState<string | null>(null);
+  /** Per-bucket file count from server cache folder (syncs menu count to on-disk images). */
+  const [serverCacheCounts, setServerCacheCounts] = useState<Record<string, number> | null>(null);
 
   const refreshCounts = () => {
     setRefreshKey((k) => k + 1);
@@ -34,7 +39,6 @@ export function CacheSettings() {
 
   const fetchMediaCount = () => {
     setMediaCountError(null);
-    // Use relative URL so in dev Vite proxies to backend; in prod same origin.
     fetch('/api/media/count')
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -51,30 +55,60 @@ export function CacheSettings() {
       });
   };
 
+  const fetchServerCacheCounts = () => {
+    fetch('/api/cache/count')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          setServerCacheCounts(data as Record<string, number>);
+        } else {
+          setServerCacheCounts(null);
+        }
+      })
+      .catch(() => setServerCacheCounts(null));
+  };
+
   useEffect(() => {
     refreshCounts();
     fetchMediaCount();
+    fetchServerCacheCounts();
   }, []);
 
   useEffect(() => {
     const onFocus = () => {
       refreshCounts();
       fetchMediaCount();
+      fetchServerCacheCounts();
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const clearBucket = (bucket: CacheBucket) => {
-    cacheService.clearBucket(bucket);
-    setRefreshKey((k) => k + 1);
-  };
-
-  const clearAll = () => {
-    if (window.confirm('Clear all cached metadata and artwork? This cannot be undone.')) {
-      cacheService.clearAll();
+    try {
+      cacheService.clearBucket(bucket);
+    } finally {
       setRefreshKey((k) => k + 1);
     }
+  };
+
+  const clearAll = async () => {
+    if (!window.confirm('Clear all cached metadata and artwork (browser + server cache folder)? This cannot be undone.')) {
+      return;
+    }
+    try {
+      const r = await fetch('/api/cache/clear', { method: 'POST' });
+      if (!r.ok) throw new Error(`Server: ${r.status}`);
+    } catch (e) {
+      setMediaCountError(e?.message || 'Failed to clear server cache');
+    }
+    cacheService.clearAll();
+    setRefreshKey((k) => k + 1);
+    fetchMediaCount();
+    fetchServerCacheCounts();
   };
 
   return (
@@ -102,6 +136,7 @@ export function CacheSettings() {
           onClick={() => {
             refreshCounts();
             fetchMediaCount();
+            fetchServerCacheCounts();
           }}
         >
           Refresh counts
@@ -168,8 +203,10 @@ export function CacheSettings() {
           >
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span>{BUCKET_LABELS[bucket]}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                {cacheService.count(bucket)} item(s) in cache
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }} key={`${bucket}-${refreshKey}`}>
+                {SERVER_CACHE_BUCKETS.includes(bucket) && serverCacheCounts != null
+                  ? `${serverCacheCounts[bucket] ?? 0} image(s) in cache folder`
+                  : `${cacheService.count(bucket)} item(s) in browser cache`}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -211,7 +248,12 @@ export function CacheSettings() {
               <button
                 type="button"
                 className="btn"
-                onClick={() => clearBucket(bucket)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  clearBucket(bucket);
+                }}
+                aria-label={`Clear ${BUCKET_LABELS[bucket]}`}
               >
                 Clear
               </button>
