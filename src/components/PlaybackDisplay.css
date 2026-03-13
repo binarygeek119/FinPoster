@@ -1,0 +1,66 @@
+/* PlaybackDisplay – ProgressSlide at top (slide down), HomeCinema below (slide down + scale to fit) */
+
+.playback-display {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.playback-display-progress-wrap {
+  flex-shrink: 0;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px;
+  animation: playback-slide-down 0.5s ease-out forwards;
+}
+
+.playback-display-progress-wrap .progress-slide {
+  height: auto;
+  width: 100%;
+}
+
+.playback-display-content-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.playback-display-content-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: top center;
+  animation: playback-content-slide-scale 0.5s ease-out 0.15s both;
+}
+
+@keyframes playback-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes playback-content-slide-scale {
+  from {
+    opacity: 0;
+    transform: translateY(-10%) scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(0.92);
+  }
+}
