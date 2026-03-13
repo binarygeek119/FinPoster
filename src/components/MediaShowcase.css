@@ -1,0 +1,136 @@
+/* Media Showcase – full viewport layout, backdrop, poster, ticker, playback bar */
+
+.media-showcase {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.media-showcase-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--jellyfin-dark);
+}
+
+.media-showcase-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+.media-showcase-poster-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.media-showcase-poster {
+  width: min(320px, 35vw);
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-showcase-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-showcase-poster-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+.media-showcase-jellyfin-logo {
+  position: absolute;
+  bottom: 80px;
+  left: 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--jellyfin-blue);
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.media-showcase-playback {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  min-width: 320px;
+}
+
+.media-showcase-time {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.media-showcase-progress-wrap {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.media-showcase-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s linear;
+}
+
+.media-showcase-ticker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 16px;
+}
+
+.media-showcase-ticker-inner {
+  white-space: nowrap;
+  animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
+  padding-left: 100%;
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Animation duration is set via inline style from posterDisplaySeconds if needed elsewhere */

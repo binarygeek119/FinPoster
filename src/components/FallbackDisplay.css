@@ -1,0 +1,38 @@
+/* Fallback display – full viewport, centered default poster with glass */
+
+.fallback-display {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--jellyfin-dark) 0%, #1a1a2e 100%);
+}
+
+.fallback-poster {
+  width: min(400px, 80vw);
+  aspect-ratio: 2/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.fallback-poster-inner {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.fallback-logo {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.fallback-message {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: 0;
+}
