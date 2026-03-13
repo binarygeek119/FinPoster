@@ -6,25 +6,30 @@
  * when settings structure changes.
  */
 
-import type { AppSettings, MediaType } from './types';
+import type { AppSettings, MediaType, UiSettings } from './types';
 
 /** Default list of media types we consider "enabled" everywhere. */
-export const DEFAULT_MEDIA_TYPES: MediaType[] = ['Movie', 'Series', 'Music', 'Book'];
+export const DEFAULT_MEDIA_TYPES: MediaType[] = ['Movie', 'Series', 'Music', 'Book', 'Photo', 'People'];
 
 /** Default Jellyfin settings (empty connection; user must configure). */
 export const defaultJellyfin = {
+  enabled: true,
   serverUrl: '',
   authMode: 'apikey' as const,
   apiKey: '',
   username: '',
   password: '',
+  playbackEnabled: true,
   playbackUserId: '',
+  playbackWatchIds: [] as string[],
+  cachedLibraries: [] as { id: string; name: string; type: string }[],
   libraryIds: [] as string[],
   enabledMediaTypes: [...DEFAULT_MEDIA_TYPES],
 };
 
 /** Default Plex settings (placeholder for future). */
 export const defaultPlex = {
+  enabled: false,
   serverUrl: '',
   token: '',
   libraryIds: [] as string[],
@@ -32,6 +37,7 @@ export const defaultPlex = {
 
 /** Default Emby settings (placeholder for future). */
 export const defaultEmby = {
+  enabled: false,
   serverUrl: '',
   apiKey: '',
   libraryIds: [] as string[],
@@ -48,6 +54,7 @@ export const DEFAULT_ACCENT_HEX = '#00a4dc';
 export const DEFAULT_TICKER_COLOR = '#ffffff';
 
 export const defaultMediaShowcase = {
+  enabled: true,
   posterDisplaySeconds: DEFAULT_POSTER_DISPLAY_SECONDS,
   showTagline: true,
   tickerScrollSpeedPxPerSec: DEFAULT_TICKER_SPEED,
@@ -57,6 +64,7 @@ export const defaultMediaShowcase = {
 };
 
 export const defaultNowShowing = {
+  enabled: true,
   manualTmdbIds: [] as string[],
   manualTvdbIds: [] as string[],
   mediaTypeForEntries: 'Movie' as MediaType,
@@ -76,6 +84,14 @@ export const defaultAds = {
 export const defaultMetadata = {
   tmdbApiKey: '',
   tvdbApiKey: '',
+  googleBooksApiKey: '',
+  comicVineApiKey: '',
+};
+
+export const defaultUi: UiSettings = {
+  activeTextureId: null,
+  dimDisplays: false,
+  dimStrength: 45,
 };
 
 /** Full default settings object. */
@@ -87,6 +103,7 @@ export const defaultSettings: AppSettings = {
   nowShowing: defaultNowShowing,
   ads: defaultAds,
   metadata: defaultMetadata,
+  ui: defaultUi,
   uploads: [],
 };
 

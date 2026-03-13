@@ -33,3 +33,30 @@
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
+.ads-display-prices {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.ads-display-price-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ads-display-price-label {
+  opacity: 0.85;
+}
+
+.ads-display-price-value {
+  font-weight: 600;
+}

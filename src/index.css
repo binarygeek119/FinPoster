@@ -70,6 +70,57 @@ body {
   flex-direction: column;
 }
 
+/* ========== Settings layout shell – responsive ========== */
+.settings-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+.settings-nav {
+  width: 270px;
+  max-height: 100vh;
+  margin: 12px;
+  padding: 16px 0;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.settings-logo {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-main {
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .settings-shell {
+    flex-direction: column;
+  }
+
+  .settings-nav {
+    width: auto;
+    min-height: auto;
+    margin: 8px;
+    padding: 8px 8px 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .settings-main {
+    padding: 12px;
+  }
+}
+
 /* ========== Glass panel – reusable block ========== */
 .glass-panel {
   background: var(--glass-bg);

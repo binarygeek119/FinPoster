@@ -7,63 +7,228 @@
  * uses the same glass panels and Jellyfin accent colors as the rest of the app.
  */
 
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import logo from '../assets/hero.png';
 
 const SETTINGS_NAV: { path: string; label: string }[] = [
-  { path: '/settings/general', label: 'General' },
-  { path: '/settings/jellyfin', label: 'Jellyfin' },
-  { path: '/settings/plex', label: 'Plex' },
-  { path: '/settings/emby', label: 'Emby' },
   { path: '/settings/media-showcase', label: 'Media Showcase' },
+  { path: '/settings/playback', label: 'Playback' },
   { path: '/settings/now-showing', label: 'Now Showing' },
   { path: '/settings/ads', label: 'Ads' },
+  { path: '/settings/arr', label: 'Arr' },
   { path: '/settings/metadata', label: 'Metadata' },
   { path: '/settings/cache', label: 'Cache' },
-  { path: '/settings/uploads', label: 'Uploads' },
   { path: '/settings/backup', label: 'Backup' },
+  { path: '/settings/about', label: 'About' },
 ];
 
 export function SettingsLayout() {
+  const location = useLocation();
+  const [serversOpen, setServersOpen] = useState(true);
+  const [arrOpen, setArrOpen] = useState(true);
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div className="settings-shell">
       {/* Glass-style side nav */}
-      <nav
-        className="glass-panel"
-        style={{
-          width: 220,
-          minHeight: '100vh',
-          margin: 12,
-          padding: '16px 0',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ padding: '0 12px 12px', borderBottom: '1px solid var(--glass-border)', marginBottom: 12 }}>
-          <NavLink to="/" style={{ color: 'var(--text-primary)', fontWeight: 600, textDecoration: 'none' }}>
-            FinPoster
+      <nav className="glass-panel settings-nav">
+        <div className="settings-logo">
+          <NavLink
+            to="/"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <img
+              src={logo}
+              alt="FinPoster"
+              style={{ width: 120, height: 'auto', objectFit: 'contain' }}
+            />
           </NavLink>
         </div>
-        {SETTINGS_NAV.map(({ path, label }) => (
-          <NavLink
-            key={path}
-            to={path}
-            end={false}
-            style={({ isActive }) => ({
-              display: 'block',
-              padding: '10px 16px',
-              margin: '2px 8px',
-              borderRadius: 8,
-              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-              background: isActive ? 'var(--accent-glow)' : 'transparent',
-              textDecoration: 'none',
-              borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-            })}
+
+        {/* General – top-level entry */}
+        <NavLink
+          to="/settings/general"
+          end={false}
+          style={({ isActive }) => ({
+            display: 'block',
+            padding: '10px 16px',
+            margin: '2px 8px',
+            borderRadius: 8,
+            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+            background: isActive ? 'var(--accent-glow)' : 'transparent',
+            textDecoration: 'none',
+            borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+          })}
+        >
+          General
+        </NavLink>
+
+        {/* Media servers dropdown group – sits under General */}
+        <button
+          type="button"
+          onClick={() => setServersOpen((v) => !v)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '10px 16px',
+            margin: '2px 8px',
+            borderRadius: 8,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--text-secondary)',
+            fontSize: 15,
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          <span>Media servers</span>
+          <span
+            style={{
+              fontSize: 12,
+              opacity: 0.7,
+              transform: serversOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.15s ease',
+            }}
           >
-            {label}
-          </NavLink>
+            ▶
+          </span>
+        </button>
+        {serversOpen && (
+          <div style={{ marginBottom: 4 }}>
+            {[
+              { path: '/settings/jellyfin', label: 'Jellyfin' },
+              { path: '/settings/plex', label: 'Plex' },
+              { path: '/settings/emby', label: 'Emby' },
+            ].map(({ path, label }) => (
+              <NavLink
+                key={path}
+                to={path}
+                end={false}
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '8px 24px',
+                  margin: '2px 8px',
+                  borderRadius: 8,
+                  color: isActive
+                    ? 'var(--text-primary)'
+                    : 'var(--text-secondary)',
+                  background: isActive ? 'var(--accent-glow)' : 'transparent',
+                  textDecoration: 'none',
+                  borderLeft: isActive
+                    ? '3px solid var(--accent)'
+                    : '3px solid transparent',
+                  fontSize: 14,
+                })}
+              >
+                {label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+
+        {/* Other settings */}
+        {SETTINGS_NAV.map(({ path, label }) => (
+          <div key={path}>
+            {path === '/settings/arr' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setArrOpen((v) => !v)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '10px 16px',
+                    margin: '2px 8px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--text-secondary)',
+                    fontSize: 15,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>{label}</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      opacity: 0.7,
+                      transform: arrOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  >
+                    ▶
+                  </span>
+                </button>
+                {arrOpen && (
+                  <div style={{ marginBottom: 4 }}>
+                    {[
+                      { subPath: '/settings/arr/lidarr', label: 'Lidarr' },
+                      { subPath: '/settings/arr/radarr', label: 'Radarr' },
+                      { subPath: '/settings/arr/sonarr', label: 'Sonarr' },
+                      { subPath: '/settings/arr/chaptarr', label: 'Chaptarr' },
+                    ].map(({ subPath, label: subLabel }) => (
+                      <NavLink
+                        key={subPath}
+                        to={subPath}
+                        end={false}
+                        style={({ isActive }) => ({
+                          display: 'block',
+                          padding: '8px 24px',
+                          margin: '2px 8px',
+                          borderRadius: 8,
+                          color: isActive
+                            ? 'var(--text-primary)'
+                            : 'var(--text-secondary)',
+                          background: isActive
+                            ? 'var(--accent-glow)'
+                            : 'transparent',
+                          textDecoration: 'none',
+                          borderLeft: isActive
+                            ? '3px solid var(--accent)'
+                            : '3px solid transparent',
+                          fontSize: 14,
+                        })}
+                      >
+                        {subLabel}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <NavLink
+                to={path}
+                end={false}
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '10px 16px',
+                  margin: '2px 8px',
+                  borderRadius: 8,
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  background: isActive ? 'var(--accent-glow)' : 'transparent',
+                  textDecoration: 'none',
+                  borderLeft: isActive
+                    ? '3px solid var(--accent)'
+                    : '3px solid transparent',
+                })}
+              >
+                {label}
+              </NavLink>
+            )}
+          </div>
         ))}
       </nav>
       {/* Main content area */}
-      <main style={{ flex: 1, padding: 24, overflow: 'auto' }}>
+      <main className="settings-main">
         <Outlet />
       </main>
     </div>

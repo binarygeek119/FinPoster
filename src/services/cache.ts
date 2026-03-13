@@ -12,6 +12,8 @@
 import type { CacheBucket } from '../types';
 
 const PREFIX = 'finposter_cache_';
+const FLAG_PREFIX = 'finposter_cache_flag_';
+const GLOBAL_FLAG_KEY = 'finposter_cache_enabled_all';
 
 const BUCKETS: CacheBucket[] = [
   'primary',
@@ -38,6 +40,26 @@ function listKeysInBucket(bucket: CacheBucket): string[] {
   return out;
 }
 
+function isGlobalEnabled(): boolean {
+  const v = localStorage.getItem(GLOBAL_FLAG_KEY);
+  // Default is enabled when unset
+  return v !== '0';
+}
+
+function setGlobalEnabled(enabled: boolean): void {
+  localStorage.setItem(GLOBAL_FLAG_KEY, enabled ? '1' : '0');
+}
+
+function isBucketEnabled(bucket: CacheBucket): boolean {
+  const v = localStorage.getItem(`${FLAG_PREFIX}${bucket}`);
+  // Default to enabled when unset
+  return v !== '0';
+}
+
+function setBucketEnabled(bucket: CacheBucket, enabled: boolean): void {
+  localStorage.setItem(`${FLAG_PREFIX}${bucket}`, enabled ? '1' : '0');
+}
+
 export const cacheService = {
   /** Get a cached string value (e.g. image URL or JSON string). */
   get(bucket: CacheBucket, id: string): string | null {
@@ -46,6 +68,7 @@ export const cacheService = {
 
   /** Set a cached value. */
   set(bucket: CacheBucket, id: string, value: string): void {
+    if (!isGlobalEnabled() || !isBucketEnabled(bucket)) return;
     try {
       localStorage.setItem(key(bucket, id), value);
     } catch {
@@ -74,5 +97,28 @@ export const cacheService = {
 
   getBuckets(): CacheBucket[] {
     return [...BUCKETS];
+  },
+
+  /** Count how many entries exist in a bucket. */
+  count(bucket: CacheBucket): number {
+    return listKeysInBucket(bucket).length;
+  },
+
+  /** Whether caching is enabled globally. */
+  isAllEnabled(): boolean {
+    return isGlobalEnabled();
+  },
+
+  setAllEnabled(enabled: boolean): void {
+    setGlobalEnabled(enabled);
+  },
+
+  /** Whether a specific bucket is enabled. */
+  isBucketEnabled(bucket: CacheBucket): boolean {
+    return isBucketEnabled(bucket);
+  },
+
+  setBucketEnabled(bucket: CacheBucket, enabled: boolean): void {
+    setBucketEnabled(bucket, enabled);
   },
 };

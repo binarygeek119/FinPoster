@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { MediaItem } from '../types';
 import { useSettings } from '../store/settingsStore';
 import './MediaShowcase.css';
+import mainBackground from '../assets/mainbackground.png';
 
 interface MediaShowcaseProps {
   /** Current item to show; if null, parent should switch to fallback or next mode. */
@@ -60,7 +61,7 @@ export function MediaShowcase({ item, isPlaying, progress = 0 }: MediaShowcasePr
     return null;
   }
 
-  const backdropUrl = item.backdropUrl || '';
+  const backdropUrl = item.backdropUrl || mainBackground || '';
   const posterUrl = item.posterUrl || '';
 
   return (

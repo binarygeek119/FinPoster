@@ -10,36 +10,30 @@
 
 import type { MediaItem, MediaType } from '../types';
 
+const DEV_BACKEND_BASE = 'http://localhost:3000';
+
+function backendBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    return DEV_BACKEND_BASE;
+  }
+  return window.location.origin;
+}
+
 const JF_MEDIA_TYPES: Record<MediaType, string> = {
   Movie: 'Movie',
   Series: 'Series',
   Music: 'Music',
   Book: 'Book',
+  Photo: 'Photo',
+  People: 'Person',
 };
 
-/** Build auth header for Jellyfin (API key or auth token). */
-function authHeader(apiKey: string): Record<string, string> {
-  return { 'X-Emby-Token': apiKey };
-}
-
-/** Get base URL without trailing slash. */
-function baseUrl(serverUrl: string): string {
-  return serverUrl.replace(/\/$/, '');
-}
-
-/**
- * Fetch and parse JSON from Jellyfin. Returns null on any error so callers
- * can implement fallback without try/catch everywhere.
- */
-async function jfFetch<T>(
-  serverUrl: string,
-  apiKey: string,
-  path: string
-): Promise<T | null> {
-  const url = `${baseUrl(serverUrl)}${path.startsWith('/') ? path : `/${path}`}`;
+async function postJson<T>(path: string, body: unknown): Promise<T | null> {
   try {
-    const res = await fetch(url, {
-      headers: { ...authHeader(apiKey), 'Content-Type': 'application/json' },
+    const res = await fetch(`${backendBaseUrl()}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -75,19 +69,14 @@ interface JFItem {
 /** Get libraries for the server (used in settings to let user pick which to use). */
 export async function getJellyfinLibraries(
   serverUrl: string,
-  apiKey: string
+  apiKey: string,
+  userId?: string
 ): Promise<{ id: string; name: string; type: string }[]> {
-  const data = await jfFetch<{ Items?: JFLibrary[] }>(
-    serverUrl,
-    apiKey,
-    '/Users/Public/Views'
+  const data = await postJson<{ id: string; name: string; type: string }[]>(
+    '/api/jellyfin/libraries',
+    { serverUrl, apiKey, userId }
   );
-  if (!data?.Items?.length) return [];
-  return data.Items.filter((l) => l.Id).map((l) => ({
-    id: l.Id!,
-    name: l.Name || 'Unnamed',
-    type: l.CollectionType || '',
-  }));
+  return data ?? [];
 }
 
 /**
@@ -99,55 +88,49 @@ export async function getJellyfinLibraryItems(
   apiKey: string,
   libraryId: string,
   types: MediaType[],
-  limit: number
+  limit: number,
+  userId?: string
 ): Promise<MediaItem[]> {
-  const fields = 'ProviderIds,Overview,Taglines,ProductionYear,CommunityRating,Studios,People';
-  const includeItemTypes = types.map((t) => JF_MEDIA_TYPES[t]).join(',');
-  const path = `/Users/Public/Items?ParentId=${encodeURIComponent(libraryId)}&IncludeItemTypes=${includeItemTypes}&Fields=${fields}&Limit=${limit}`;
-  const data = await jfFetch<{ Items?: JFItem[]; TotalRecordCount?: number }>(
+  const includeTypes = types.map((t) => JF_MEDIA_TYPES[t]);
+  const data = await postJson<{
+    id: string;
+    title: string;
+    type?: string;
+    tagline?: string;
+    plot?: string;
+    year?: number;
+    rating?: string;
+    studio?: string;
+    posterUrl?: string;
+    backdropUrl?: string;
+    logoUrl?: string;
+  }[]>('/api/jellyfin/items', {
     serverUrl,
     apiKey,
-    path
-  );
-  if (!data?.Items?.length) return [];
-
-  const base = baseUrl(serverUrl);
-  const items: MediaItem[] = [];
-
-  for (const it of data.Items) {
-    if (!it.Id) continue;
-    const imgPath = (tag?: string) =>
-      tag ? `${base}/Items/${it.Id}/Images/${tag}` : undefined;
-    const posterTag = it.ImageTags?.Primary;
-    const backdropTags = it.ImageTags?.Backdrop;
-    const logoTag = it.ImageTags?.Logo;
-
-    const mediaType = (it.Type as MediaType) || 'Movie';
-    const studio = it.Studios?.[0]?.Name;
-    const artist = it.AlbumArtist || it.People?.find((p) => p.Type === 'Artist')?.Name;
-    const author = it.People?.find((p) => p.Type === 'Author')?.Name;
-
-    items.push({
-      id: it.Id,
-      tmdbId: it.ProviderIds?.Tmdb,
-      tvdbId: it.ProviderIds?.Tvdb,
-      type: mediaType,
-      title: it.Name || 'Unknown',
-      tagline: it.Taglines?.[0],
-      plot: it.Overview,
-      year: it.ProductionYear,
-      rating: it.CommunityRating != null ? String(it.CommunityRating) : undefined,
-      studio,
-      artist,
-      author,
-      posterUrl: imgPath(posterTag),
-      backdropUrl: backdropTags?.[0] ? imgPath(backdropTags[0]) : undefined,
-      logoUrl: logoTag ? imgPath(logoTag) : undefined,
-      source: 'jellyfin',
-    });
-  }
-
-  return items;
+    libraryId,
+    types: includeTypes,
+    limit,
+    userId,
+  });
+  if (!data?.length) return [];
+  return data.map((it) => ({
+    id: it.id,
+    tmdbId: undefined,
+    tvdbId: undefined,
+    type: (it.type as MediaType) || 'Movie',
+    title: it.title || 'Unknown',
+    tagline: it.tagline,
+    plot: it.plot,
+    year: it.year,
+    rating: it.rating,
+    studio: it.studio,
+    artist: undefined,
+    author: undefined,
+    posterUrl: it.posterUrl,
+    backdropUrl: it.backdropUrl,
+    logoUrl: it.logoUrl,
+    source: 'jellyfin',
+  }));
 }
 
 /**
@@ -156,34 +139,12 @@ export async function getJellyfinLibraryItems(
 export async function getJellyfinItem(
   serverUrl: string,
   apiKey: string,
-  itemId: string
+  itemId: string,
+  userId?: string
 ): Promise<MediaItem | null> {
-  const path = `/Users/Public/Items/${itemId}?Fields=ProviderIds,Overview,Taglines,ProductionYear,CommunityRating,Studios,People,ImageTags`;
-  const it = await jfFetch<JFItem>(serverUrl, apiKey, path);
-  if (!it?.Id) return null;
-
-  const base = baseUrl(serverUrl);
-  const imgPath = (tag?: string) =>
-    tag ? `${base}/Items/${it.Id}/Images/${tag}` : undefined;
-
-  return {
-    id: it.Id,
-    tmdbId: it.ProviderIds?.Tmdb,
-    tvdbId: it.ProviderIds?.Tvdb,
-    type: (it.Type as MediaType) || 'Movie',
-    title: it.Name || 'Unknown',
-    tagline: it.Taglines?.[0],
-    plot: it.Overview,
-    year: it.ProductionYear,
-    rating: it.CommunityRating != null ? String(it.CommunityRating) : undefined,
-    studio: it.Studios?.[0]?.Name,
-    artist: it.AlbumArtist || it.People?.find((p) => p.Type === 'Artist')?.Name,
-    author: it.People?.find((p) => p.Type === 'Author')?.Name,
-    posterUrl: imgPath(it.ImageTags?.Primary),
-    backdropUrl: it.ImageTags?.Backdrop?.[0] ? imgPath(it.ImageTags.Backdrop[0]) : undefined,
-    logoUrl: it.ImageTags?.Logo ? imgPath(it.ImageTags.Logo) : undefined,
-    source: 'jellyfin',
-  };
+  // For now, just re-use the client-side fetch path if needed or return null.
+  // Backend does not yet expose a single-item endpoint.
+  return null;
 }
 
 /**
@@ -195,11 +156,23 @@ export async function getNowPlayingItemIds(
   apiKey: string,
   userId: string
 ): Promise<string[]> {
-  const data = await jfFetch<{ Items?: { Id?: string }[] }>(
+  // Not yet proxied; keep using direct Jellyfin when we add Now Playing support.
+  return [];
+}
+
+/**
+ * Simple connectivity test used by the Jellyfin settings \"Test\" button.
+ * We call the /System/Info endpoint, which does not require a specific user,
+ * and return true if the server responds successfully.
+ */
+export async function testJellyfinConnection(
+  serverUrl: string,
+  apiKey: string
+): Promise<boolean> {
+  if (!serverUrl || !apiKey) return false;
+  const data = await postJson<{ ok: boolean }>('/api/jellyfin/test', {
     serverUrl,
     apiKey,
-    `/Users/${userId}/PlayingItems`
-  );
-  if (!data?.Items?.length) return [];
-  return data.Items.map((i) => i.Id).filter(Boolean) as string[];
+  });
+  return !!data?.ok;
 }

@@ -10,10 +10,19 @@
 export type DisplayMode = 'media-showcase' | 'now-showing' | 'ads';
 
 /** Media types we support in showcase and now showing (matches Jellyfin library types). */
-export type MediaType = 'Movie' | 'Series' | 'Music' | 'Book';
+export type MediaType = 'Movie' | 'Series' | 'Music' | 'Book' | 'Photo' | 'People';
 
 /** Where a piece of media or artwork came from (for fallback and cache keys). */
-export type MediaSourceKind = 'jellyfin' | 'plex' | 'emby' | 'cache' | 'tmdb' | 'tvdb' | 'user';
+export type MediaSourceKind =
+  | 'jellyfin'
+  | 'plex'
+  | 'emby'
+  | 'cache'
+  | 'tmdb'
+  | 'tvdb'
+  | 'googlebooks'
+  | 'comicvine'
+  | 'user';
 
 /**
  * Normalized media item used by display pages.
@@ -54,13 +63,22 @@ export interface MediaItem {
 }
 
 /**
- * Ad item: just an image URL and optional label.
+ * Ad item: image + optional label and pricing lines.
  * Stored in uploads; ads display mode shows these in rotation.
  */
+export interface AdPriceLine {
+  /** Short label, e.g. \"Small\", \"Combo 1\", \"per month\". */
+  label: string;
+  /** Price text, e.g. \"$9.99\". */
+  price: string;
+}
+
 export interface AdItem {
   id: string;
   imageUrl: string;
   label?: string;
+  /** Optional one or more price lines to show over the ad. */
+  prices?: AdPriceLine[];
 }
 
 /**
@@ -77,13 +95,21 @@ export interface NowShowingEntry {
 
 /** Jellyfin connection and library settings. */
 export interface JellyfinSettings {
+  /** Whether Jellyfin is currently used as an active media source. */
+  enabled: boolean;
   serverUrl: string;
   authMode: 'apikey' | 'password';
   apiKey: string;
   username: string;
   password: string;
-  /** User or device ID used to detect "currently playing". */
+  /** Whether playback-based features are enabled. */
+  playbackEnabled?: boolean;
+  /** Primary user or device ID used to detect \"currently playing\". */
   playbackUserId: string;
+  /** Additional user/device IDs to watch for playback (optional). */
+  playbackWatchIds?: string[];
+  /** Last loaded library list (so we can show it without reloading). */
+  cachedLibraries?: { id: string; name: string; type: string }[];
   /** Library IDs to use for Media Showcase / Now Showing. */
   libraryIds: string[];
   enabledMediaTypes: MediaType[];
@@ -91,6 +117,8 @@ export interface JellyfinSettings {
 
 /** Placeholder for future Plex support; same idea as Jellyfin. */
 export interface PlexSettings {
+  /** Whether Plex is currently used as an active media source. */
+  enabled?: boolean;
   serverUrl: string;
   token: string;
   libraryIds: string[];
@@ -98,6 +126,8 @@ export interface PlexSettings {
 
 /** Placeholder for future Emby support. */
 export interface EmbySettings {
+  /** Whether Emby is currently used as an active media source. */
+  enabled?: boolean;
   serverUrl: string;
   apiKey: string;
   libraryIds: string[];
@@ -105,6 +135,8 @@ export interface EmbySettings {
 
 /** Media Showcase display options (timing, ticker, colors). */
 export interface MediaShowcaseSettings {
+  /** Whether the Media Showcase mode is enabled as a display. */
+  enabled: boolean;
   posterDisplaySeconds: number;
   showTagline: boolean;
   tickerScrollSpeedPxPerSec: number;
@@ -116,6 +148,8 @@ export interface MediaShowcaseSettings {
 
 /** How we build the Now Showing list and showtimes. */
 export interface NowShowingSettings {
+  /** Whether the Now Showing board is enabled as a display mode. */
+  enabled: boolean;
   /** Manually entered TMDb movie IDs for showtime entries. */
   manualTmdbIds: string[];
   /** Manually entered TheTVDB IDs (e.g. for TV). */
@@ -139,15 +173,26 @@ export interface AdsSettings {
   insertionIntervalPosters: number;
 }
 
-/** External API keys for metadata fallback (TMDb, TheTVDB). */
+/** External API keys for metadata fallback (TMDb, TheTVDB, Google Books, Comic Vine). */
 export interface MetadataSettings {
   tmdbApiKey: string;
   tvdbApiKey: string;
+  googleBooksApiKey: string;
+  comicVineApiKey: string;
 }
 
 /** Cache clear options (which buckets to clear). */
 export type CacheBucket = 'primary' | 'logo' | 'metadata' | 'artists' | 'authors' | 'backdrop';
 
+/** Simple UI/theme-level options (non-media, non-provider). */
+export interface UiSettings {
+  /** Active global texture upload id (if any). */
+  activeTextureId?: string | null;
+  /** When true, dim display pages but keep settings fully bright. */
+  dimDisplays: boolean;
+  /** How strong the dim overlay is, from 0 (none) to 100 (fully black). */
+  dimStrength: number;
+}
 /** Upload categories we support (textures, ads). */
 export type UploadCategory = 'textures' | 'ads';
 
@@ -159,6 +204,10 @@ export interface UploadedFile {
   url: string;
   /** For ads: optional label. */
   label?: string;
+  /** For ads: optional longer description/notes. */
+  description?: string;
+   /** For ads: optional repeated price lines. */
+  prices?: AdPriceLine[];
 }
 
 /**
@@ -173,6 +222,7 @@ export interface AppSettings {
   nowShowing: NowShowingSettings;
   ads: AdsSettings;
   metadata: MetadataSettings;
+  ui: UiSettings;
   /** List of uploaded files (ads, textures). */
   uploads: UploadedFile[];
 }

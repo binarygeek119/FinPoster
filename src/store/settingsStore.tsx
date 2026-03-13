@@ -91,6 +91,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
 export function useSettings() {
   const ctx = useContext(SettingsContext);
-  if (!ctx) throw new Error('useSettings must be used inside SettingsProvider');
+  if (!ctx) {
+    // In dev tools or isolated renders, components might mount outside the
+    // provider. Fall back to default settings rather than crashing the app.
+    console.warn('FinPoster: useSettings used outside SettingsProvider; falling back to defaults.');
+    const noop: SetSettings = () => {};
+    return {
+      settings: defaultSettings,
+      setSettings: noop,
+      persist: () => {},
+    };
+  }
   return ctx;
 }
