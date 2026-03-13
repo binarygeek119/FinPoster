@@ -13,8 +13,13 @@ import { useEffect, useState, useCallback } from 'react';
 import type { DisplayMode, MediaItem, NowShowingEntry, AdItem } from '../types';
 import { getTickerText } from '../utils/tickerText';
 import { useSettings } from '../store/settingsStore';
-import { getCachedMedia, getJellyfinLibraryItems } from '../services/jellyfin';
+import { getCachedMedia, getJellyfinLibraryItems, resolveAssetUrl } from '../services/jellyfin';
 import { logDebug } from '../services/logger';
+
+/** Only include items that have a poster image (skip until poster is in cache / available). */
+function onlyWithPoster(items: MediaItem[]): MediaItem[] {
+  return items.filter((m) => !!resolveAssetUrl(m.posterUrl));
+}
 
 /** Build list of ads from uploads that are enabled in ads settings. */
 function getEnabledAds(uploads: { id: string; category: string; url: string; label?: string }[], enabledAdIds: string[]): AdItem[] {
@@ -37,7 +42,8 @@ async function buildNowShowingEntries(
   if (sourceMode !== 'random') return entries;
 
   const cached = await getCachedMedia('jellyfin', theaterCount * 3);
-  const movieOrSeries = cached.filter((m) => m.type === 'Movie' || m.type === 'Series');
+  const withPoster = onlyWithPoster(cached);
+  const movieOrSeries = withPoster.filter((m) => m.type === 'Movie' || m.type === 'Series');
   const shuffled = [...movieOrSeries].sort(() => Math.random() - 0.5);
   for (let i = 0; i < Math.min(theaterCount, shuffled.length); i++) {
     const item = shuffled[i];
@@ -53,6 +59,8 @@ async function buildNowShowingEntries(
   return entries;
 }
 
+export type PlaybackStatus = 'playing' | 'paused' | 'stopped' | null;
+
 export function useDisplayRotation() {
   const { settings } = useSettings();
   const [mode, setMode] = useState<DisplayMode>('media-showcase');
@@ -61,6 +69,9 @@ export function useDisplayRotation() {
   const [posterRotationCount, setPosterRotationCount] = useState(0);
   const [nowShowingEntries, setNowShowingEntries] = useState<NowShowingEntry[]>([]);
   const [adsList, setAdsList] = useState<AdItem[]>([]);
+  /** When set (e.g. from Jellyfin now-playing), playback display stays until stopped or ended. */
+  const [playbackStatus, setPlaybackStatus] = useState<PlaybackStatus>(null);
+  const [playingProgress, setPlayingProgress] = useState(0);
 
   const jellyfin = settings.jellyfin;
   const mediaShowcase = settings.mediaShowcase;
@@ -83,7 +94,7 @@ export function useDisplayRotation() {
       return;
     }
     const cached = await getCachedMedia('jellyfin', 100);
-    setMediaPool(cached);
+    setMediaPool(onlyWithPoster(cached));
     setCurrentIndex(0);
   }, [mediaShowcase.enabled, needsMediaCache]);
 
@@ -122,11 +133,12 @@ export function useDisplayRotation() {
     let cancelled = false;
     (async () => {
       const cached = await getCachedMedia('jellyfin', 100);
+      const pool = onlyWithPoster(cached);
       if (!cancelled) {
-        setMediaPool(cached);
+        setMediaPool(pool);
         setCurrentIndex(0);
       }
-      logDebug('useDisplayRotation: initial cache size', cached.length);
+      logDebug('useDisplayRotation: initial cache size', cached.length, 'with poster', pool.length);
       if (
         !syncStopped &&
         autoSyncEnabled &&
@@ -141,7 +153,7 @@ export function useDisplayRotation() {
         if (cancelled) return;
         const after = await getCachedMedia('jellyfin', 100);
         if (!cancelled) {
-          setMediaPool(after);
+          setMediaPool(onlyWithPoster(after));
           setCurrentIndex(0);
         }
       }
@@ -275,19 +287,32 @@ export function useDisplayRotation() {
     return () => clearTimeout(t);
   }, [mode]);
 
-  // After Metapills, show ProgressSlide for full duration.
+  // After Metapills, show ProgressSlide (playback display). Treat as paused so it stays until stopped or ended.
   useEffect(() => {
     if (mode !== 'metapills') return;
-    const t = setTimeout(() => setMode('progressslide'), FULL_SLIDE_DURATION_MS);
+    const t = setTimeout(() => {
+      setMode('progressslide');
+      setPlaybackStatus('paused');
+      setPlayingProgress(0);
+    }, FULL_SLIDE_DURATION_MS);
     return () => clearTimeout(t);
   }, [mode]);
 
-  // After ProgressSlide, return to media showcase.
+  // After ProgressSlide: stay on playback display while playing or paused; only leave when stopped or ended.
   useEffect(() => {
     if (mode !== 'progressslide') return;
+    if (playbackStatus === 'stopped' || playingProgress >= 1) {
+      setPlaybackStatus(null);
+      setPlayingProgress(0);
+      setMode('media-showcase');
+      return;
+    }
+    if (playbackStatus === 'playing' || playbackStatus === 'paused') {
+      return;
+    }
     const t = setTimeout(() => setMode('media-showcase'), FULL_SLIDE_DURATION_MS);
     return () => clearTimeout(t);
-  }, [mode]);
+  }, [mode, playbackStatus, playingProgress]);
 
   return {
     mode,
@@ -297,7 +322,11 @@ export function useDisplayRotation() {
     adsList,
     adsDurationSeconds: adsSettings.adDisplaySeconds,
     showFallback: mode === 'media-showcase' && !currentMedia && mediaPool.length === 0,
-    /** Playback progress 0..1 (e.g. from Jellyfin now-playing; 0 when not available). */
-    playingProgress: 0,
+    /** Playback progress 0..1. When >= 1, playback display exits. */
+    playingProgress,
+    /** When 'playing' or 'paused', poster + ProgressSlide stay on screen until stopped or ended. */
+    playbackStatus,
+    setPlaybackStatus,
+    setPlayingProgress,
   };
 }
