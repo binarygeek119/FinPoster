@@ -1,10 +1,12 @@
-/* Media Showcase – full viewport layout, backdrop, poster, ticker, playback bar */
+/* Media Showcase – full viewport layout, backdrop, poster, metapills, ticker, playback bar */
 
 .media-showcase {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .media-showcase-backdrop {
@@ -13,31 +15,93 @@
   background-size: cover;
   background-position: center;
   background-color: var(--jellyfin-dark);
+  /* blur and scale set via inline style from settings (backdropBlurPx) */
+  transform: scale(1.03);
 }
 
 .media-showcase-overlay {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    transparent 50%,
-    rgba(0, 0, 0, 0.7) 100%
+    transparent 55%,
+    rgba(0, 0, 0, 0.4) 100%
   );
   pointer-events: none;
 }
 
+/* Home Cinema title (static) at top */
+.media-showcase-title-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  padding: clamp(12px, 2vw, 24px) 24px clamp(16px, 3vw, 32px);
+  text-align: center;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.media-showcase-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 6vw, 3.5rem);
+  font-weight: 700;
+  white-space: nowrap;
+  transform-origin: center top;
+  color: var(--text-primary);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+}
+
+/* Main block: poster (centered) + Metapills right below, above TickerSlide */
+.media-showcase-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding-top: clamp(8px, 1.5vw, 16px);
+}
+
 .media-showcase-poster-wrap {
-  position: absolute;
-  inset: 0;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
 }
 
+.media-showcase-poster-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(480px, 52vw);
+  border: 20px solid color-mix(in srgb, var(--poster-border-color, #fff) 12%, transparent);
+  box-sizing: border-box;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.media-showcase-poster-texture {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(100%);
+  pointer-events: none;
+  border-radius: 0;
+}
+.media-showcase-poster-block--no-logo .media-showcase-poster {
+  width: 100%;
+}
+
 .media-showcase-poster {
-  width: min(320px, 35vw);
+  width: 100%;
   aspect-ratio: 2/3;
   overflow: hidden;
   display: flex;
@@ -63,19 +127,140 @@
   color: var(--text-secondary);
 }
 
-.media-showcase-jellyfin-logo {
-  position: absolute;
-  bottom: 80px;
-  left: 24px;
-  font-size: 1rem;
+/* Media logo or title below poster */
+.media-showcase-media-label-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 12px 16px 16px;
+  text-align: center;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+}
+.media-showcase-media-logo {
+  max-width: 100%;
+  max-height: clamp(48px, 8vw, 80px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.75));
+}
+.media-showcase-media-title {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: 600;
-  color: var(--jellyfin-blue);
-  text-shadow: 0 0 10px var(--accent-glow);
+  color: var(--text-primary);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Poster transition animations (randomly chosen when poster changes) */
+@keyframes media-showcase-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes media-showcase-slide-left {
+  from { opacity: 0; transform: translateX(80px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes media-showcase-slide-right {
+  from { opacity: 0; transform: translateX(-80px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes media-showcase-slide-up {
+  from { opacity: 0; transform: translateY(60px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes media-showcase-slide-down {
+  from { opacity: 0; transform: translateY(-60px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes media-showcase-zoom-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes media-showcase-zoom-out {
+  from { opacity: 0; transform: scale(1.15); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.media-showcase-poster--fade {
+  animation: media-showcase-fade-in 0.55s ease-out forwards;
+}
+.media-showcase-poster--slideLeft {
+  animation: media-showcase-slide-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.media-showcase-poster--slideRight {
+  animation: media-showcase-slide-right 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.media-showcase-poster--slideUp {
+  animation: media-showcase-slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.media-showcase-poster--slideDown {
+  animation: media-showcase-slide-down 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.media-showcase-poster--zoomIn {
+  animation: media-showcase-zoom-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.media-showcase-poster--zoomOut {
+  animation: media-showcase-zoom-out 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Metapills: right below poster (padding so they don't touch), above TickerSlide; scale to fit */
+.media-showcase-metapills-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 4vw, 36px) 32px clamp(20px, 4vw, 36px);
+  pointer-events: none;
+  min-height: 0;
+}
+
+.media-showcase-metapills-wrap .metapills {
+  height: auto;
+  padding: 0;
+  max-width: min(520px, 58vw);
+}
+
+.media-showcase-metapills-wrap .metapills-inner {
+  max-width: 100%;
+  gap: clamp(6px, 1.2vw, 12px);
+}
+
+.media-showcase-metapills-wrap .metapills-pill {
+  padding: clamp(6px, 1.2vw, 12px) clamp(12px, 2.5vw, 20px);
+  font-size: clamp(0.7rem, 1.8vw, 0.95rem);
+}
+
+/* TickerSlide bar at bottom (logo | ticker | time) – width aligned to poster block */
+.media-showcase-tickerslide-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: min(720px, 75vw);
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px 12px;
+  margin: 0 auto;
+}
+
+.media-showcase-tickerslide-wrap .tickerslide {
+  height: 100%;
+  padding: 0;
+}
+
+.media-showcase-tickerslide-wrap .tickerslide-bar {
+  max-width: none;
 }
 
 .media-showcase-playback {
   position: absolute;
-  bottom: 72px;
+  bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -104,33 +289,6 @@
   background: var(--accent);
   border-radius: 3px;
   transition: width 0.3s linear;
-}
-
-.media-showcase-ticker {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  padding: 0 16px;
-}
-
-.media-showcase-ticker-inner {
-  white-space: nowrap;
-  animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
-  padding-left: 100%;
-}
-
-@keyframes ticker-scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
 }
 
 /* Animation duration is set via inline style from posterDisplaySeconds if needed elsewhere */

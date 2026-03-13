@@ -70,21 +70,25 @@ body {
   flex-direction: column;
 }
 
-/* ========== Settings layout shell – responsive ========== */
+/* ========== Settings layout shell – sidebar left, content right ========== */
 .settings-shell {
   display: flex;
+  flex-direction: row;
   min-height: 100vh;
+  height: 100vh;
   background: var(--bg-base);
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .settings-nav {
   width: 270px;
-  max-height: 100vh;
-  margin: 12px;
-  padding: 16px 0;
   flex-shrink: 0;
+  padding: 16px 0;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0;
+  align-self: stretch;
 }
 
 .settings-logo {
@@ -100,17 +104,21 @@ body {
   flex: 1;
   padding: 24px;
   overflow: auto;
+  min-height: 0;
 }
 
-@media (max-width: 900px) {
+/* Stack nav on top only on narrow screens */
+@media (max-width: 640px) {
   .settings-shell {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
   }
 
   .settings-nav {
     width: auto;
     min-height: auto;
-    margin: 8px;
+    align-self: auto;
     padding: 8px 8px 12px;
     display: flex;
     flex-direction: column;
@@ -205,6 +213,43 @@ body {
   letter-spacing: 0.1em;
 }
 
+/* ========== Select / dropdown – dark with light text ========== */
+select,
+select.input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--jellyfin-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+select:hover,
+select.input:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+select:focus,
+select.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+select option,
+select.input option {
+  background: var(--jellyfin-card);
+  color: var(--text-primary);
+}
+
 /* ========== Headings – accent underline for settings ========== */
 h1, h2, h3 {
   font-family: var(--font-display);
@@ -240,11 +285,7 @@ a:hover {
   border: 0;
 }
 
-/* Full viewport cover for display pages */
+/* Display viewport – full window; poster content scales to cover (whole page = poster) */
 .display-viewport {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  background-color: var(--jellyfin-dark);
 }

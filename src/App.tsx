@@ -7,8 +7,10 @@
  * settings. Theme is glass + Jellyfin colors throughout.
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { SettingsProvider } from './store/settingsStore';
+import { logInfo } from './services/logger';
 import { SettingsLayout } from './components/SettingsLayout';
 import { DisplayPage } from './pages/DisplayPage';
 import { GeneralSettings } from './pages/settings/GeneralSettings';
@@ -26,10 +28,30 @@ import { PlaybackSettings } from './pages/settings/PlaybackSettings';
 import { ArrSettings } from './pages/settings/ArrSettings';
 import './index.css';
 
+/** When navigating from settings back to the display, refresh the page so the display shows updated settings. */
+function RefreshDisplayOnReturnFromSettings() {
+  const location = useLocation();
+  const prevPathRef = useRef(location.pathname);
+
+  useEffect(() => {
+    const prev = prevPathRef.current;
+    prevPathRef.current = location.pathname;
+    if (location.pathname === '/' && prev.startsWith('/settings')) {
+      window.location.reload();
+    }
+  }, [location.pathname]);
+
+  return null;
+}
+
 function App() {
+  useEffect(() => {
+    logInfo('FinPoster started');
+  }, []);
   return (
     <SettingsProvider>
       <BrowserRouter>
+        <RefreshDisplayOnReturnFromSettings />
         <Routes>
           {/* Display: single route; click anywhere opens settings */}
           <Route path="/" element={<DisplayPage />} />

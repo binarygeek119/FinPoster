@@ -7,9 +7,17 @@
  * Poster display duration and ticker speed come from Media Showcase settings.
  */
 
-import { useEffect, useRef, useState } from 'react';
-import type { MediaItem } from '../types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MediaItem, PosterTransitionId } from '../types';
+import { getTickerText } from '../utils/tickerText';
+import { getDisplayFontFamily } from '../constants/displayFonts';
 import { useSettings } from '../store/settingsStore';
+import { DEFAULT_TEXTURES } from '../constants/defaultTextures';
+import { resolveAssetUrl } from '../services/jellyfin';
+import { getEffectiveDisplayColors } from '../utils/displayColors';
+import { useViewportBackdrop } from '../context/DisplayViewportBackdrop';
+import { TickerSlide } from './TickerSlide';
+import { Metapills } from './Metapills';
 import './MediaShowcase.css';
 import mainBackground from '../assets/mainbackground.png';
 
@@ -25,75 +33,158 @@ interface MediaShowcaseProps {
 export function MediaShowcase({ item, isPlaying, progress = 0 }: MediaShowcaseProps) {
   const { settings } = useSettings();
   const opts = settings.mediaShowcase;
-  const [tickerKey, setTickerKey] = useState(0);
-  const tickerRef = useRef<HTMLDivElement>(null);
-  const [tickerDurationSec, setTickerDurationSec] = useState(30);
 
-  // Build ticker text from available metadata (scrolls right-to-left).
-  const tickerParts: string[] = [];
-  if (item?.title) tickerParts.push(item.title);
-  if (item?.type) tickerParts.push(item.type);
-  if (item?.rating) tickerParts.push(`Rating: ${item.rating}`);
-  if (opts.showTagline && item?.tagline) tickerParts.push(item.tagline);
-  if (item?.plot) tickerParts.push(item.plot);
-  if (item?.year) tickerParts.push(String(item.year));
-  if (item?.studio) tickerParts.push(item.studio);
-  if (item?.network) tickerParts.push(item.network);
-  if (item?.publisher) tickerParts.push(item.publisher);
-  if (item?.artist) tickerParts.push(item.artist);
-  if (item?.author) tickerParts.push(item.author);
-  const tickerText = tickerParts.filter(Boolean).join('  •  ');
+  // Pick a random enabled transition when the poster item changes.
+  const currentTransition = useMemo((): PosterTransitionId => {
+    const list = opts.enabledTransitions ?? ['fade'];
+    if (!item?.id || list.length === 0) return 'fade';
+    return list[Math.floor(Math.random() * list.length)];
+  }, [item?.id, opts.enabledTransitions]);
 
-  // When item changes, reset ticker animation.
+  // Ticker shows only: plot (movie/TV) or album info (music). Rendered via TickerSlide at bottom.
+  const tickerText = getTickerText(item) || item?.title || '';
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleWrapRef = useRef<HTMLDivElement>(null);
+  const [titleScale, setTitleScale] = useState(1);
+
   useEffect(() => {
-    setTickerKey((k) => k + 1);
-  }, [item?.id]);
-
-  // Compute ticker animation duration from content width and speed (px/s) so scroll speed is correct.
-  useEffect(() => {
-    const el = tickerRef.current;
-    if (!el || !opts.tickerScrollSpeedPxPerSec) return;
-    const width = el.scrollWidth;
-    if (width) setTickerDurationSec(Math.max(10, width / opts.tickerScrollSpeedPxPerSec));
-  }, [tickerText, opts.tickerScrollSpeedPxPerSec, tickerKey]);
+    const wrap = titleWrapRef.current;
+    const title = titleRef.current;
+    if (!wrap || !title || !item?.title) {
+      setTitleScale(1);
+      return;
+    }
+    const updateScale = () => {
+      const wrapWidth = wrap.clientWidth;
+      const scrollWidth = title.scrollWidth;
+      if (wrapWidth > 0 && scrollWidth > wrapWidth) {
+        setTitleScale(wrapWidth / scrollWidth);
+      } else {
+        setTitleScale(1);
+      }
+    };
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [item?.title]);
 
   if (!item) {
     return null;
   }
 
-  const backdropUrl = item.backdropUrl || mainBackground || '';
-  const posterUrl = item.posterUrl || '';
+  const backdropUrl = resolveAssetUrl(item.backdropUrl) || mainBackground || '';
+  const posterUrl = resolveAssetUrl(item.posterUrl);
+  const logoUrl = resolveAssetUrl(item.logoUrl);
+  const blurPx = opts.backdropBlurPx ?? 18;
+  const { setViewportBackdrop } = useViewportBackdrop();
+
+  useEffect(() => {
+    setViewportBackdrop(backdropUrl || null, blurPx);
+    return () => setViewportBackdrop(null, 0);
+  }, [backdropUrl, blurPx, setViewportBackdrop]);
+
+  const displayTitle = (settings.ui?.homeCinemaTitle?.trim() || 'Home Cinema') || '';
+  const showMediaLogo = opts.showMediaLogo !== false;
+  const showLogoBelow = showMediaLogo && !!logoUrl;
+  const titleFontFamily = getDisplayFontFamily(opts.homeCinemaFont && opts.homeCinemaFont !== 'default' ? opts.homeCinemaFont : opts.displayFont);
+  const colors = useMemo(() => getEffectiveDisplayColors(opts), [opts]);
+  const titleColor = colors.homeCinemaTitleColor;
+
+  const ui = settings.ui;
+  const textureList = useMemo(
+    () => [
+      ...DEFAULT_TEXTURES,
+      ...settings.uploads.filter((u) => u.category === 'textures'),
+    ],
+    [settings.uploads],
+  );
+  const posterTexture = useMemo(() => {
+    const id = ui.activeTextureId;
+    if (!id) return null;
+    if (id === 'random') {
+      if (textureList.length === 0) return null;
+      return textureList[Math.floor(Math.random() * textureList.length)];
+    }
+    return textureList.find((u) => u.id === id) ?? null;
+  }, [ui.activeTextureId, textureList]);
+  const posterTextureStrength = Math.max(0, Math.min(100, ui.textureStrength ?? 100)) / 100;
 
   return (
     <div className="media-showcase">
-      {/* Full-screen backdrop */}
-      <div
-        className="media-showcase-backdrop"
-        style={{
-          backgroundImage: backdropUrl ? `url(${backdropUrl})` : undefined,
-        }}
-      />
+      {/* Backdrop is rendered at viewport level by DisplayLayout (not scaled) */}
       <div className="media-showcase-overlay" />
 
-      {/* Center poster */}
-      <div className="media-showcase-poster-wrap">
-        <div
-          className="media-showcase-poster glass-panel"
-          style={{ ['--show-duration' as string]: `${opts.posterDisplaySeconds}s` }}
+      {/* Home Cinema title (static) */}
+      <div ref={titleWrapRef} className="media-showcase-title-wrap">
+        <h1
+          ref={titleRef}
+          className="media-showcase-title"
+          style={{
+            transform: `scale(${titleScale})`,
+            ...(titleFontFamily ? { fontFamily: titleFontFamily } : {}),
+            ...(titleColor ? { color: titleColor } : {}),
+          }}
         >
-          {posterUrl ? (
-            <img src={posterUrl} alt="" className="media-showcase-poster-img" />
-          ) : (
-            <div className="media-showcase-poster-placeholder">
-              <span>{item.title}</span>
-            </div>
-          )}
-        </div>
+          {displayTitle}
+        </h1>
       </div>
 
-      {/* Jellyfin logo bottom-left */}
-      <div className="media-showcase-jellyfin-logo" aria-hidden>
-        Jellyfin
+      {/* Main content: poster (+ optional logo below) then Metapills */}
+      <div className="media-showcase-main">
+        <div className="media-showcase-poster-wrap">
+          <div
+            className={`media-showcase-poster-block glass-panel${showMediaLogo ? '' : ' media-showcase-poster-block--no-logo'}`}
+            style={{
+              ['--poster-border-color' as string]: colors.borderColor,
+            }}
+          >
+            <div
+              key={item.id}
+              className={`media-showcase-poster media-showcase-poster--${currentTransition}`}
+              style={{ ['--show-duration' as string]: `${opts.posterDisplaySeconds}s` }}
+            >
+              {posterUrl ? (
+                <img src={posterUrl} alt="" className="media-showcase-poster-img" />
+              ) : (
+                <div className="media-showcase-poster-placeholder">
+                  <span>{item.title}</span>
+                </div>
+              )}
+            </div>
+            {showMediaLogo && (
+              <div className="media-showcase-media-label-wrap">
+                {showLogoBelow ? (
+                  <img src={logoUrl!} alt="" className="media-showcase-media-logo" />
+                ) : (
+                  <span
+                    className="media-showcase-media-title"
+                    style={{
+                      ...(titleFontFamily ? { fontFamily: titleFontFamily } : {}),
+                      ...(titleColor ? { color: titleColor } : {}),
+                    }}
+                  >
+                    {item.title}
+                  </span>
+                )}
+              </div>
+            )}
+            {/* Poster texture overlay: only over this poster block */}
+            {posterTexture && posterTextureStrength > 0 && (
+              <div
+                className="media-showcase-poster-texture"
+                style={{
+                  backgroundImage: `url(${posterTexture.url})`,
+                  opacity: posterTextureStrength,
+                }}
+              />
+            )}
+          </div>
+        </div>
+        {/* Metapills: rating, year, score, runtime – right below poster, above TickerSlide */}
+        <div className="media-showcase-metapills-wrap">
+          <Metapills item={item} pillColors={colors.metapillsColors} />
+        </div>
       </div>
 
       {/* Playback overlay: start time, progress bar, end time */}
@@ -118,17 +209,15 @@ export function MediaShowcase({ item, isPlaying, progress = 0 }: MediaShowcasePr
         </div>
       )}
 
-      {/* Scrolling ticker at bottom; duration in seconds so scroll speed (px/s) is correct */}
-      <div
-        className="media-showcase-ticker glass-panel"
-        style={{
-          ['--ticker-duration' as string]: `${tickerDurationSec}s`,
-          color: opts.tickerColor || undefined,
-        }}
-      >
-        <div ref={tickerRef} key={tickerKey} className="media-showcase-ticker-inner">
-          {tickerText || item.title}
-        </div>
+      {/* TickerSlide at bottom: logo | scrolling ticker (plot/album info) | time pill */}
+      <div className="media-showcase-tickerslide-wrap">
+        <TickerSlide
+          tickerText={tickerText}
+          tickerSpeedPxPerSec={opts.tickerScrollSpeedPxPerSec}
+          tickerColor={colors.tickerColor}
+          timePillColor={colors.timePillColor}
+          tickerFontFamily={getDisplayFontFamily(opts.displayFont)}
+        />
       </div>
     </div>
   );
