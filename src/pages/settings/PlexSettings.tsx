@@ -15,7 +15,7 @@ export function PlexSettings() {
     <div className="glass-panel" style={{ padding: 24, maxWidth: 640 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
         <img
-          src="/plex.png"
+          src="/logos/plex.png"
           alt=""
           style={{ height: 40, width: 'auto', objectFit: 'contain' }}
         />

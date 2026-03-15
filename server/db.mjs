@@ -186,3 +186,19 @@ export function clearMediaItems() {
   database.prepare(`DELETE FROM media_items`).run();
 }
 
+/** Null the URL column for a given cache bucket so stored URLs don't point to deleted files. */
+export function clearMediaItemUrlsForBucket(bucket) {
+  const database = getDb();
+  const column =
+    bucket === 'primary'
+      ? 'poster_url'
+      : bucket === 'backdrop'
+        ? 'backdrop_url'
+        : bucket === 'logo'
+          ? 'logo_url'
+          : null;
+  if (column) {
+    database.prepare(`UPDATE media_items SET ${column} = NULL`).run();
+  }
+}
+

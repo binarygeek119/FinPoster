@@ -42,6 +42,7 @@ export function DisplayPage() {
   const {
     mode,
     currentMedia,
+    playbackItem,
     nextMedia,
     upcomingMedia,
     nowShowingEntries,
@@ -50,12 +51,13 @@ export function DisplayPage() {
     showFallback,
     playingProgress,
   } = useDisplayRotation(initialMode);
-  // In progressslide mode, show playback UI: use item with playback times (real or synthetic).
+  // In progressslide mode, show the media that is playing (pinned when we entered playback), not a random pool item.
+  const playbackMedia = playbackItem ?? currentMedia;
   const playbackDisplayItem =
-    mode === 'progressslide' && currentMedia
-      ? hasPlayback(currentMedia)
-        ? currentMedia
-        : { ...currentMedia, playbackStartTime: 0, playbackEndTime: 7200 }
+    mode === 'progressslide' && playbackMedia
+      ? hasPlayback(playbackMedia)
+        ? playbackMedia
+        : { ...playbackMedia, playbackStartTime: 0, playbackEndTime: 7200 }
       : null;
 
   // Preload upcoming media posters/backdrops/logos so the next few slides are ready.

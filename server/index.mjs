@@ -4,7 +4,12 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { initDb, getMediaItems, getMediaItemCount, upsertMediaItems, clearMediaItems } from './db.mjs';
+import { initDb, getMediaItems, getMediaItemCount, upsertMediaItems, clearMediaItems, clearMediaItemUrlsForBucket } from './db.mjs';
+import { registerTmdbRoutes } from './metadata/tmdb.mjs';
+import { registerTvdbRoutes } from './metadata/tvdb.mjs';
+import { registerGoogleBooksRoutes } from './metadata/googlebooks.mjs';
+import { registerComicVineRoutes } from './metadata/comicvine.mjs';
+import { registerMusicBrainzRoutes } from './metadata/musicbrainz.mjs';
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -185,6 +190,30 @@ app.get('/api/cache/count', (req, res) => {
   }
 });
 
+// Clear a single cache bucket (on-disk folder + null that URL column in media_items)
+app.post('/api/cache/clear-bucket', (req, res) => {
+  try {
+    const bucket = req.body?.bucket;
+    if (!bucket || !IMAGE_CACHE_BUCKETS.includes(bucket)) {
+      res.status(400).json({ error: 'Invalid or missing bucket' });
+      return;
+    }
+    const dir = path.join(cacheDir, bucket);
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        try {
+          fs.unlinkSync(path.join(dir, f));
+        } catch (_) {}
+      }
+    }
+    clearMediaItemUrlsForBucket(bucket);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
 // Clear all cache: delete on-disk cache files and media_items table (frontend also clears localStorage)
 app.post('/api/cache/clear', (req, res) => {
   try {
@@ -247,6 +276,56 @@ app.post('/api/jellyfin/test', async (req, res) => {
   }
 });
 
+// Get now-playing from Jellyfin Sessions (for playback display)
+app.post('/api/jellyfin/now-playing', async (req, res) => {
+  const { serverUrl, apiKey, userId, watchIds } = req.body || {};
+  if (!serverUrl || !apiKey) {
+    res.status(400).json({ error: 'Missing serverUrl or apiKey' });
+    return;
+  }
+  try {
+    const path = '/Sessions?nowPlaying=true';
+    const data = await jfFetchJson(serverUrl, apiKey, path);
+    const sessions = Array.isArray(data) ? data : [];
+    const userIdTrim = (userId && String(userId).trim()) || '';
+    const watchSet = Array.isArray(watchIds) && watchIds.length
+      ? new Set(watchIds.map((id) => String(id).trim()).filter(Boolean))
+      : null;
+    let fallback = null;
+    for (const s of sessions) {
+      const np = s.NowPlayingItem;
+      if (!np || !np.Id) continue;
+      const playState = s.PlayState || {};
+      const positionTicks = playState.PositionTicks != null ? Number(playState.PositionTicks) : 0;
+      const runTimeTicks = np.RunTimeTicks != null ? Number(np.RunTimeTicks) : null;
+      const progress = runTimeTicks && runTimeTicks > 0
+        ? Math.min(1, Math.max(0, positionTicks / runTimeTicks))
+        : 0;
+      const payload = {
+        itemId: np.Id,
+        positionTicks,
+        runTimeTicks: runTimeTicks ?? 0,
+        isPaused: !!playState.IsPaused,
+        progress,
+      };
+      if (userIdTrim && (s.UserId || '').toString().trim() !== userIdTrim) {
+        if (!fallback) fallback = payload;
+        continue;
+      }
+      if (watchSet && watchSet.size && !watchSet.has((s.Id || '').toString())) {
+        if (!fallback) fallback = payload;
+        continue;
+      }
+      res.json(payload);
+      return;
+    }
+    if (fallback) res.json(fallback);
+    else res.json(null);
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
 // Get Jellyfin libraries for a user
 app.post('/api/jellyfin/libraries', async (req, res) => {
   const { serverUrl, apiKey, userId } = req.body || {};
@@ -270,290 +349,118 @@ app.post('/api/jellyfin/libraries', async (req, res) => {
   }
 });
 
-// ==== Metadata proxy APIs (TMDb, Google Books) ====
+// ==== Metadata proxy APIs (TMDb, TheTVDB, Google Books, Comic Vine) ====
+registerTmdbRoutes(app, { downloadImageToCache });
+registerTvdbRoutes(app, { downloadImageToCache });
+registerGoogleBooksRoutes(app, { downloadImageToCache });
+registerComicVineRoutes(app, { downloadImageToCache });
+registerMusicBrainzRoutes(app, { downloadImageToCache });
 
-// TMDb enrich (movie/series details + images)
-app.post('/api/metadata/tmdb/enrich', async (req, res) => {
-  const { apiKey, item } = req.body || {};
-  if (!apiKey || !item || !item.id || !item.type) {
-    res.status(400).json({ error: 'Missing apiKey or item' });
+// Fetch a single item by ID and cache its images (e.g. when playback shows an item without a poster).
+app.post('/api/jellyfin/item', async (req, res) => {
+  const { serverUrl, apiKey, itemId, userId } = req.body || {};
+  if (!serverUrl || !apiKey || !itemId) {
+    res.status(400).json({ error: 'Missing serverUrl, apiKey or itemId' });
     return;
   }
-  const tmdbId = item.tmdbId || item.id;
-  const type = item.type === 'Series' ? 'tv' : 'movie';
+  const userSegment = userId && String(userId).trim().length > 0 ? String(userId).trim() : 'Public';
+  const fields =
+    'ProviderIds,Overview,Taglines,ProductionYear,CommunityRating,Studios,People,ImageTags,BackdropImageTags,SeriesId';
   try {
-    const cfgRes = await fetch(
-      `https://api.themoviedb.org/3/configuration?api_key=${encodeURIComponent(apiKey)}`,
-    );
-    if (!cfgRes.ok) {
-      res.status(502).json({ error: 'TMDb config failed' });
+    const pathPart = `/Users/${encodeURIComponent(userSegment)}/Items/${encodeURIComponent(itemId)}?Fields=${encodeURIComponent(fields)}`;
+    const it = await jfFetchJson(serverUrl, apiKey, pathPart, userSegment);
+    if (!it || !it.Id) {
+      res.status(404).json({ error: 'Item not found' });
       return;
     }
-    const cfg = await cfgRes.json();
-    const base = cfg?.images?.secure_base_url;
-    const size =
-      (cfg?.images?.poster_sizes || []).find((s) => s === 'w500') || 'w500';
-
-    const resItem = await fetch(
-      `https://api.themoviedb.org/3/${type}/${encodeURIComponent(
-        tmdbId,
-      )}?api_key=${encodeURIComponent(apiKey)}&language=en-US`,
-    );
-    if (!resItem.ok) {
-      res.status(502).json({ error: 'TMDb item fetch failed' });
-      return;
+    const base = jfBaseUrl(serverUrl);
+    let posterUrl, logoUrl, backdropUrl;
+    const isEpisode = (it.Type || '').toLowerCase() === 'episode';
+    const seriesId = it.SeriesId;
+    if (isEpisode && seriesId) {
+      const seriesPath = `/Users/${encodeURIComponent(userSegment)}/Items/${encodeURIComponent(seriesId)}?Fields=${encodeURIComponent(fields)}`;
+      const series = await jfFetchJson(serverUrl, apiKey, seriesPath, userSegment);
+      if (series && series.Id) {
+        const pTag = series.ImageTags?.Primary;
+        const lTag = series.ImageTags?.Logo;
+        const bTags = series.BackdropImageTags ?? series.ImageTags?.Backdrop ?? [];
+        const b0 = Array.isArray(bTags) ? bTags[0] : bTags;
+        posterUrl = pTag ? `${base}/Items/${series.Id}/Images/Primary?tag=${encodeURIComponent(pTag)}` : undefined;
+        logoUrl = lTag ? `${base}/Items/${series.Id}/Images/Logo?tag=${encodeURIComponent(lTag)}` : undefined;
+        backdropUrl = (Array.isArray(bTags) && bTags.length > 0) || b0
+          ? `${base}/Items/${series.Id}/Images/Backdrop/0${b0 ? `?tag=${encodeURIComponent(b0)}` : ''}`
+          : undefined;
+      }
     }
-    const data = await resItem.json();
-    const posterPath = data.poster_path;
-    const backdropPath = data.backdrop_path;
-
-    const update = {};
-    if (!item.tagline && data.tagline) update.tagline = data.tagline;
-    if (!item.plot && data.overview) update.plot = data.overview;
-    if (!item.year) {
-      const yearStr = (data.release_date || data.first_air_date || '').slice(0, 4);
-      if (yearStr) update.year = parseInt(yearStr, 10);
+    if (!isEpisode && posterUrl == null) {
+      const posterTag = it.ImageTags?.Primary;
+      const logoTag = it.ImageTags?.Logo;
+      const backdropTags = it.BackdropImageTags ?? it.ImageTags?.Backdrop ?? [];
+      const firstBackdropTag = Array.isArray(backdropTags) ? backdropTags[0] : backdropTags;
+      posterUrl = posterTag
+        ? `${base}/Items/${it.Id}/Images/Primary?tag=${encodeURIComponent(posterTag)}`
+        : undefined;
+      logoUrl = logoTag
+        ? `${base}/Items/${it.Id}/Images/Logo?tag=${encodeURIComponent(logoTag)}`
+        : undefined;
+      backdropUrl =
+        (Array.isArray(backdropTags) && backdropTags.length > 0) || firstBackdropTag
+          ? `${base}/Items/${it.Id}/Images/Backdrop/0${firstBackdropTag ? `?tag=${encodeURIComponent(firstBackdropTag)}` : ''}`
+          : undefined;
     }
-    if (base && posterPath && !item.posterUrl) {
-      const url = `${base}${size}${posterPath}`;
-      const cached = await downloadImageToCache(url, 'primary', { keyHint: `tmdb_${tmdbId}` });
-      update.posterUrl = cached || url;
-    }
-    if (backdropPath && !item.backdropUrl) {
-      const url = `https://image.tmdb.org/t/p/original${backdropPath}`;
-      const cached = await downloadImageToCache(url, 'backdrop', { keyHint: `tmdb_${tmdbId}` });
-      update.backdropUrl = cached || url;
-    }
-    res.json(update);
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
-  }
-});
-
-// TMDb API key test
-app.post('/api/metadata/tmdb/test', async (req, res) => {
-  const { apiKey } = req.body || {};
-  if (!apiKey) {
-    res.json({ ok: false });
-    return;
-  }
-  try {
-    const r = await fetch(
-      `https://api.themoviedb.org/3/configuration?api_key=${encodeURIComponent(apiKey)}`,
-    );
-    res.json({ ok: r.ok });
-  } catch {
-    res.json({ ok: false });
-  }
-});
-
-// Google Books enrich for books
-app.post('/api/metadata/googlebooks/enrich', async (req, res) => {
-  const { apiKey, item } = req.body || {};
-  if (!item || item.type !== 'Book' || !item.title) {
-    res.status(400).json({ error: 'Missing or invalid item' });
-    return;
-  }
-  const qParts = [];
-  if (item.title) qParts.push(`intitle:${encodeURIComponent(item.title)}`);
-  if (item.author) qParts.push(`inauthor:${encodeURIComponent(item.author)}`);
-  const q = qParts.join('+');
-  const url =
-    `https://www.googleapis.com/books/v1/volumes?q=${q}` +
-    (apiKey ? `&key=${encodeURIComponent(apiKey)}` : '');
-  try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      res.status(502).json({ error: 'Google Books request failed' });
-      return;
-    }
-    const data = await r.json();
-    const volume = data?.items?.[0]?.volumeInfo;
-    if (!volume) {
-      res.json({});
-      return;
-    }
-    const update = {};
-    if (!item.plot && volume.description) update.plot = volume.description;
-    if (!item.publisher && volume.publisher) update.publisher = volume.publisher;
-    if (!item.year && volume.publishedDate) {
-      const yearStr = String(volume.publishedDate).slice(0, 4);
-      if (yearStr) update.year = parseInt(yearStr, 10);
-    }
-    if (!item.author && Array.isArray(volume.authors) && volume.authors.length) {
-      update.author = volume.authors[0];
-    }
-    if (!item.posterUrl && volume.imageLinks) {
-      const thumbUrl = volume.imageLinks.thumbnail || volume.imageLinks.smallThumbnail;
-      const volumeId = (volume.id || '').toString();
-      const cached = volumeId
-        ? await downloadImageToCache(thumbUrl, 'primary', { keyHint: `googlebooks_${volumeId}` })
-        : await downloadImageToCache(thumbUrl, 'primary');
-      update.posterUrl = cached || thumbUrl;
-    }
-    res.json(update);
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
-  }
-});
-
-// Google Books API key test
-app.post('/api/metadata/googlebooks/test', async (req, res) => {
-  const { apiKey } = req.body || {};
-  try {
-    const url =
-      'https://www.googleapis.com/books/v1/volumes?q=harry+potter' +
-      (apiKey ? `&key=${encodeURIComponent(apiKey)}` : '');
-    const r = await fetch(url);
-    res.json({ ok: r.ok });
-  } catch {
-    res.json({ ok: false });
-  }
-});
-
-// Comic Vine API key test (server-side only)
-app.post('/api/metadata/comicvine/test', async (req, res) => {
-  const { apiKey } = req.body || {};
-  if (!apiKey) {
-    res.json({ ok: false });
-    return;
-  }
-  try {
-    // Lightweight search; Comic Vine expects api_key as query param.
-    const url =
-      `https://comicvine.gamespot.com/api/issues/?api_key=${encodeURIComponent(
-        apiKey,
-      )}&format=json&field_list=id&limit=1`;
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'FinPoster/1.0 (metadata check)',
-      },
-    });
-    res.json({ ok: r.ok });
-  } catch {
-    res.json({ ok: false });
-  }
-});
-
-// TheTVDB API key test (v4 login)
-app.post('/api/metadata/tvdb/test', async (req, res) => {
-  const { apiKey } = req.body || {};
-  if (!apiKey) {
-    res.json({ ok: false });
-    return;
-  }
-  try {
-    const r = await fetch('https://api4.thetvdb.com/v4/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ apikey: apiKey }),
-    });
-    res.json({ ok: r.ok });
-  } catch {
-    res.json({ ok: false });
-  }
-});
-
-// TheTVDB enrich for series metadata/poster
-app.post('/api/metadata/tvdb/enrich', async (req, res) => {
-  const { apiKey, item } = req.body || {};
-  if (!apiKey || !item || !item.tvdbId) {
-    res.status(400).json({ error: 'Missing apiKey or tvdbId' });
-    return;
-  }
-  try {
-    const loginRes = await fetch('https://api4.thetvdb.com/v4/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apikey: apiKey }),
-    });
-    if (!loginRes.ok) {
-      res.status(502).json({ error: 'TVDB login failed' });
-      return;
-    }
-    const login = await loginRes.json();
-    const token = login?.data?.token;
-    if (!token) {
-      res.status(502).json({ error: 'TVDB token missing' });
-      return;
-    }
-    const seriesRes = await fetch(
-      `https://api4.thetvdb.com/v4/series/${encodeURIComponent(item.tvdbId)}`,
+    const cast = (it.People || []).map((p) => ({ name: p.Name || '', role: p.Role })).filter((c) => c.name);
+    const raw = {
+      id: it.Id,
+      title: it.Name || 'Unknown',
+      type: it.Type,
+      tagline: it.Taglines?.[0],
+      plot: it.Overview,
+      year: it.ProductionYear,
+      rating: it.CommunityRating != null ? String(it.CommunityRating) : undefined,
+      studio: it.Studios?.[0]?.Name,
+      posterUrl: posterUrl || undefined,
+      backdropUrl: backdropUrl || undefined,
+      logoUrl: logoUrl || undefined,
+      cast,
+    };
+    const authHeaders = jfAuthHeaders(apiKey, userSegment);
+    const [cachedPoster, cachedBackdrop, cachedLogo] = await Promise.all([
+      raw.posterUrl ? downloadImageToCache(raw.posterUrl, 'primary', { headers: authHeaders }) : null,
+      raw.backdropUrl ? downloadImageToCache(raw.backdropUrl, 'backdrop', { headers: authHeaders }) : null,
+      raw.logoUrl ? downloadImageToCache(raw.logoUrl, 'logo', { headers: authHeaders }) : null,
+    ]);
+    raw.posterUrl = cachedPoster || null;
+    raw.backdropUrl = cachedBackdrop || null;
+    raw.logoUrl = cachedLogo || null;
+    upsertMediaItems([
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        id: raw.id,
+        source: 'jellyfin',
+        libraryId: null,
+        title: raw.title,
+        type: raw.type,
+        year: raw.year,
+        rating: raw.rating,
+        posterUrl: raw.posterUrl,
+        backdropUrl: raw.backdropUrl,
+        logoUrl: raw.logoUrl,
+        metadata: { tagline: raw.tagline, plot: raw.plot, studio: raw.studio, cast: raw.cast },
       },
-    );
-    if (!seriesRes.ok) {
-      res.status(502).json({ error: 'TVDB series fetch failed' });
-      return;
-    }
-    const seriesData = await seriesRes.json();
-    const data = seriesData?.data;
-    const update = {};
-    if (!item.tagline && data?.overview) update.tagline = data.overview;
-    if (!item.plot && data?.overview) update.plot = data.overview;
-    if (!item.year && data?.year) update.year = data.year;
-    // TVDB v4 includes image posters in artwork array; pick first poster if present.
-    const artwork = Array.isArray(data?.artwork) ? data.artwork : [];
-    const poster = artwork.find(
-      (a) => a.type === 2 || a.type === 'poster',
-    );
-    if (!item.posterUrl && poster?.image) {
-      const tvdbId = String(item.tvdbId || data?.id || '');
-      const cached = tvdbId
-        ? await downloadImageToCache(poster.image, 'primary', { keyHint: `tvdb_${tvdbId}` })
-        : await downloadImageToCache(poster.image, 'primary');
-      update.posterUrl = cached || poster.image;
-    }
-    res.json(update);
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
-  }
-});
-
-// Comic Vine enrich for comics/graphic novels (basic)
-app.post('/api/metadata/comicvine/enrich', async (req, res) => {
-  const { apiKey, item } = req.body || {};
-  if (!apiKey || !item || !item.title) {
-    res.status(400).json({ error: 'Missing apiKey or item title' });
-    return;
-  }
-  try {
-    const url =
-      `https://comicvine.gamespot.com/api/search/?api_key=${encodeURIComponent(
-        apiKey,
-      )}&format=json&resources=issue&field_list=name,deck,image,cover_date&limit=1&query=${encodeURIComponent(
-        item.title,
-      )}`;
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'FinPoster/1.0 (metadata enrich)',
-      },
+    ]);
+    res.json({
+      id: raw.id,
+      title: raw.title,
+      type: raw.type,
+      tagline: raw.tagline,
+      plot: raw.plot,
+      year: raw.year,
+      rating: raw.rating,
+      studio: raw.studio,
+      posterUrl: raw.posterUrl,
+      backdropUrl: raw.backdropUrl,
+      logoUrl: raw.logoUrl,
+      cast: raw.cast,
     });
-    if (!r.ok) {
-      res.status(502).json({ error: 'Comic Vine request failed' });
-      return;
-    }
-    const data = await r.json();
-    const issue = data?.results?.[0];
-    if (!issue) {
-      res.json({});
-      return;
-    }
-    const update = {};
-    if (!item.plot && issue.deck) update.plot = issue.deck;
-    if (!item.year && issue.cover_date) {
-      const yearStr = String(issue.cover_date).slice(0, 4);
-      if (yearStr) update.year = parseInt(yearStr, 10);
-    }
-    if (!item.posterUrl && issue.image?.original_url) {
-      update.posterUrl = issue.image.original_url;
-    }
-    res.json(update);
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
@@ -561,7 +468,7 @@ app.post('/api/metadata/comicvine/enrich', async (req, res) => {
 
 // Get items from a Jellyfin library
 app.post('/api/jellyfin/items', async (req, res) => {
-  const { serverUrl, apiKey, libraryId, types, limit = 50, userId } = req.body || {};
+  const { serverUrl, apiKey, libraryId, types, limit, userId } = req.body || {};
   if (!serverUrl || !apiKey || !libraryId) {
     res.status(400).json({ error: 'Missing serverUrl, apiKey or libraryId' });
     return;
@@ -572,16 +479,17 @@ app.post('/api/jellyfin/items', async (req, res) => {
     'ProviderIds,Overview,Taglines,ProductionYear,CommunityRating,Studios,People,ImageTags,BackdropImageTags';
 
   try {
-    // Pull items from Jellyfin in smaller pages until we've reached the requested
-    // limit or there are no more items. This avoids a single huge response for
-    // very large libraries while still giving the display a rich pool.
-    const pageSize = 50;
-    const maxItems = Number.isFinite(Number(limit)) ? Number(limit) || pageSize : pageSize;
+    // Pull items from Jellyfin in small pages. If limit is 0 or omitted, keep requesting
+    // until the full library is cached; otherwise stop at limit (sanity cap 100k).
+    const pageSize = 100;
+    const requestedLimit = Number(limit);
+    const syncFullLibrary = !Number.isFinite(requestedLimit) || requestedLimit <= 0;
+    const maxItems = syncFullLibrary ? 100000 : Math.min(requestedLimit, 100000);
     const allItems = [];
     let startIndex = 0;
 
-    while (allItems.length < maxItems) {
-      const remaining = maxItems - allItems.length;
+    while (syncFullLibrary ? true : allItems.length < maxItems) {
+      const remaining = syncFullLibrary ? pageSize : maxItems - allItems.length;
       const thisPageSize = Math.min(pageSize, remaining);
       const pathPart = `/Users/${encodeURIComponent(
         userSegment,
@@ -601,11 +509,10 @@ app.post('/api/jellyfin/items', async (req, res) => {
         break;
       }
       allItems.push(...items);
-      if (items.length < thisPageSize) {
-        // Jellyfin returned fewer than requested; we've reached the end.
-        break;
-      }
       startIndex += items.length;
+      if (allItems.length >= maxItems) break;
+      // If Jellyfin returned fewer than requested it may be end of library, or a server cap (e.g. 50).
+      // Only stop when we got zero items; otherwise keep requesting from the new startIndex.
     }
 
     const base = jfBaseUrl(serverUrl);
@@ -635,6 +542,10 @@ app.post('/api/jellyfin/items', async (req, res) => {
               }`
             : undefined;
 
+        const cast = (it.People || [])
+          .map((p) => ({ name: p.Name || '', role: p.Role }))
+          .filter((c) => c.name);
+
         return {
           id: it.Id,
           title: it.Name || 'Unknown',
@@ -648,10 +559,11 @@ app.post('/api/jellyfin/items', async (req, res) => {
           posterUrl,
           backdropUrl,
           logoUrl,
+          cast,
         };
       });
 
-    // Download images to on-disk cache and rewrite URLs to /cache/...
+    // Download images to on-disk cache for all items (full server cache).
     // Only cache URLs are sent to the frontend; Jellyfin URLs require auth and would fail in the browser.
     const authHeaders = jfAuthHeaders(apiKey, userSegment);
     await Promise.all(
@@ -690,6 +602,7 @@ app.post('/api/jellyfin/items', async (req, res) => {
           tagline: it.tagline,
           plot: it.plot,
           studio: it.studio,
+          cast: it.cast,
         },
       })),
     );
@@ -741,6 +654,7 @@ app.get('/api/media', (req, res) => {
         tagline: metadata.tagline,
         plot: metadata.plot,
         studio: metadata.studio,
+        cast: metadata.cast,
       };
     }),
   );

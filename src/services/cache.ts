@@ -18,7 +18,6 @@ const GLOBAL_FLAG_KEY = 'finposter_cache_enabled_all';
 const BUCKETS: CacheBucket[] = [
   'primary',
   'logo',
-  'metadata',
   'people',
   'backdrop',
   'music',
@@ -136,8 +135,12 @@ export const cacheService = {
     return isGlobalEnabled();
   },
 
+  /** Turn global cache on/off and sync all per-bucket switches to the same state. */
   setAllEnabled(enabled: boolean): void {
     setGlobalEnabled(enabled);
+    for (const bucket of BUCKETS) {
+      setBucketEnabled(bucket, enabled);
+    }
   },
 
   /** Whether a specific bucket is enabled. */

@@ -1,4 +1,4 @@
-/* TickerSlide – one bar: logo | ticker | time pill, all same height */
+/* TickerSlide – one bar: logo | ticker | time pill. Sizes scale with 1440×900 design. */
 
 .tickerslide {
   position: relative;
@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  padding: 0 1.25rem;
 }
 
 .tickerslide-bar {
@@ -15,10 +15,11 @@
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 1200px;
-  height: 56px;
-  padding: 0 10px 0 6px;
-  gap: 16px;
+  max-width: 83.33%;
+  height: clamp(3rem, 6.2%, 4rem);
+  min-height: 44px;
+  padding: 0 0.6rem 0 0.4rem;
+  gap: clamp(0.75rem, 1.1%, 1rem);
   border-radius: 999px;
 }
 
@@ -31,13 +32,13 @@
   justify-content: flex-start;
   width: auto;
   min-width: 0;
-  height: 36px;
+  height: clamp(1.1rem, 2.8%, 1.5rem);
   margin-left: 2px;
 }
 
 .tickerslide-logo-img {
-  max-height: 32px;
-  max-width: 100px;
+  max-height: 1.25rem;
+  max-width: 3.75rem;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.75));
@@ -62,21 +63,21 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  padding: 0 4px;
+  padding: 0 0.25rem;
   pointer-events: none;
   /* Fade: right of logo (left edge) going right; left of time (right edge) going left */
   mask-image: linear-gradient(
     to right,
     transparent 0,
-    black 28px,
-    black calc(100% - 28px),
+    black 4rem,
+    black calc(100% - 4rem),
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0,
-    black 28px,
-    black calc(100% - 28px),
+    black 4rem,
+    black calc(100% - 4rem),
     transparent 100%
   );
 }
@@ -88,7 +89,7 @@
   padding-left: 100%;
   color: var(--ticker-bar-color, var(--text-primary));
   font-family: var(--ticker-bar-font), inherit;
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 1rem, 1.1rem);
   box-sizing: content-box;
 }
 
@@ -110,12 +111,12 @@
   z-index: 1;
   flex-shrink: 0;
   margin-left: auto;
-  padding: 8px 20px;
+  padding: 0.35rem 0.85rem;
   border-radius: 999px;
   background: var(--jellyfin-card);
   border: 1px solid var(--ticker-time-pill-color, var(--glass-border));
   font-family: var(--ticker-bar-font), inherit;
-  font-size: 1rem;
+  font-size: clamp(0.72rem, 0.82rem, 0.9rem);
   font-weight: 600;
   color: var(--ticker-time-pill-color, var(--text-primary));
 }

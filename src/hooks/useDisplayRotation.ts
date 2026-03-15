@@ -9,11 +9,11 @@
  * fetching from Jellyfin and building fallback when nothing is available.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { DisplayMode, MediaItem, NowShowingEntry, AdItem } from '../types';
 import { getTickerText } from '../utils/tickerText';
 import { useSettings } from '../store/settingsStore';
-import { getCachedMedia, getJellyfinLibraryItems, resolveAssetUrl } from '../services/jellyfin';
+import { getCachedMedia, getJellyfinLibraryItems, getJellyfinItem, getNowPlaying, resolveAssetUrl } from '../services/jellyfin';
 import { logDebug } from '../services/logger';
 
 /** Only include items that have a poster image (skip until poster is in cache / available). */
@@ -100,6 +100,9 @@ export function useDisplayRotation(initialMode?: DisplayMode | null) {
   /** When set (e.g. from Jellyfin now-playing), playback display stays until stopped or ended. */
   const [playbackStatus, setPlaybackStatus] = useState<PlaybackStatus>(null);
   const [playingProgress, setPlayingProgress] = useState(0);
+  /** Item to show in playback display (pinned when entering progressslide so poster matches "playing" media). */
+  const [playbackItem, setPlaybackItem] = useState<MediaItem | null>(null);
+  const playbackItemRef = useRef<MediaItem | null>(null);
 
   /** True when at least one display mode needs media from cache (showcase or now-showing random/manual+fill). */
   const needsMediaCache =
@@ -139,7 +142,7 @@ export function useDisplayRotation(initialMode?: DisplayMode | null) {
         jellyfin.apiKey,
         libId,
         jellyfin.enabledMediaTypes,
-        50,
+        0,
         jellyfin.playbackUserId
       );
     }
@@ -324,6 +327,7 @@ export function useDisplayRotation(initialMode?: DisplayMode | null) {
     const t = setTimeout(() => {
       setCurrentIndex((i) => {
         if (poolLength <= 1) return i + 1;
+        const avoidLast = Math.max(1, mediaShowcase.avoidRepeatWithinLast ?? 5);
         const recentSet = new Set<number>([i, ...recentPosterIndices]);
         let candidate = i;
         const maxAttempts = 10;
@@ -339,15 +343,14 @@ export function useDisplayRotation(initialMode?: DisplayMode | null) {
         }
         setRecentPosterIndices((prev) => {
           const nextArr = [...prev, candidate];
-          const MAX_RECENT = 5;
-          return nextArr.slice(-MAX_RECENT);
+          return nextArr.slice(-Math.max(0, avoidLast - 1));
         });
         return candidate;
       });
       setPosterRotationCount((c) => c + 1);
     }, duration);
     return () => clearTimeout(t);
-  }, [mode, currentMedia?.id, mediaShowcase.enabled, mediaShowcase.posterDisplaySeconds, mediaPool.length, recentPosterIndices]);
+  }, [mode, currentMedia?.id, mediaShowcase.enabled, mediaShowcase.posterDisplaySeconds, mediaShowcase.avoidRepeatWithinLast, mediaPool.length, recentPosterIndices]);
 
   // After N poster rotations (media-showcase cycles), switch to Ads or Now Showing.
   useEffect(() => {
@@ -391,37 +394,136 @@ export function useDisplayRotation(initialMode?: DisplayMode | null) {
     return () => clearTimeout(t);
   }, [mode]);
 
-  // After Metapills, show ProgressSlide (playback display). Treat as paused so it stays until stopped or ended.
+  // Keep ref updated so we know which item was on screen when we leave metapills.
+  useEffect(() => {
+    if (mode === 'metapills' && currentMedia) playbackItemRef.current = currentMedia;
+  }, [mode, currentMedia]);
+
+  // After Metapills, show ProgressSlide (playback display) only when playback is enabled. Otherwise go to media-showcase.
   useEffect(() => {
     if (mode !== 'metapills') return;
     const t = setTimeout(() => {
+      if (!jellyfin.playbackEnabled) {
+        setMode('media-showcase');
+        return;
+      }
+      const item = playbackItemRef.current;
+      setPlaybackItem(item ?? null);
       setMode('progressslide');
       setPlaybackStatus('paused');
       setPlayingProgress(0);
     }, FULL_SLIDE_DURATION_MS);
     return () => clearTimeout(t);
-  }, [mode]);
+  }, [mode, jellyfin.playbackEnabled]);
 
-  // After ProgressSlide: stay on playback display while playing or paused; only leave when stopped or ended.
+  // When playback is enabled, poll Jellyfin Sessions to show/hide playback UI based on actual playback.
+  const PLAYBACK_POLL_MS = 5000;
+  useEffect(() => {
+    if (!jellyfin.playbackEnabled || !jellyfin.serverUrl || !jellyfin.apiKey) return;
+    let cancelled = false;
+    const poll = async () => {
+      if (cancelled) return;
+      const np = await getNowPlaying(
+        jellyfin.serverUrl,
+        jellyfin.apiKey,
+        jellyfin.playbackUserId || undefined,
+        jellyfin.playbackWatchIds?.length ? jellyfin.playbackWatchIds : undefined
+      );
+      if (cancelled) return;
+      logDebug('[Playback] poll now-playing', np ? { itemId: np.itemId, progress: np.progress, isPaused: np.isPaused } : 'nothing playing');
+      if (np) {
+        setPlaybackStatus(np.isPaused ? 'paused' : 'playing');
+        setPlayingProgress(np.progress);
+        setMode('progressslide');
+        const placeholder: MediaItem = {
+          id: np.itemId,
+          type: 'Movie',
+          title: 'Loading…',
+          source: 'jellyfin',
+        };
+        setPlaybackItem((prev) => {
+          if (prev?.id === np.itemId) return prev;
+          return placeholder;
+        });
+        if (playbackItemRef.current?.id !== np.itemId) {
+          playbackItemRef.current = placeholder;
+          getJellyfinItem(
+            jellyfin.serverUrl,
+            jellyfin.apiKey,
+            np.itemId,
+            jellyfin.playbackUserId
+          ).then((item) => {
+            if (!cancelled && item) {
+              playbackItemRef.current = item;
+              setPlaybackItem(item);
+            }
+          });
+        }
+      } else {
+        setPlaybackStatus('stopped');
+      }
+    };
+    poll();
+    const id = setInterval(poll, PLAYBACK_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [
+    jellyfin.playbackEnabled,
+    jellyfin.serverUrl,
+    jellyfin.apiKey,
+    jellyfin.playbackUserId,
+    jellyfin.playbackWatchIds,
+  ]);
+
+  // When playback is disabled, exit playback mode and clear playback state immediately.
+  useEffect(() => {
+    if (jellyfin.playbackEnabled) return;
+    setPlaybackStatus(null);
+    setPlayingProgress(0);
+    setPlaybackItem(null);
+    playbackItemRef.current = null;
+    if (mode === 'progressslide') {
+      setMode('media-showcase');
+    }
+  }, [jellyfin.playbackEnabled, mode]);
+
+  // When playback is showing an item without a cached poster, fetch that item from Jellyfin so the poster is cached.
+  useEffect(() => {
+    if (mode !== 'progressslide' || !playbackItem || playbackItem.posterUrl) return;
+    if (!jellyfin.enabled || !jellyfin.serverUrl || !jellyfin.apiKey) return;
+    let cancelled = false;
+    getJellyfinItem(
+      jellyfin.serverUrl,
+      jellyfin.apiKey,
+      playbackItem.id,
+      jellyfin.playbackUserId
+    ).then((item) => {
+      if (cancelled || !item?.posterUrl) return;
+      setPlaybackItem(item);
+    });
+    return () => { cancelled = true; };
+  }, [mode, playbackItem?.id, playbackItem?.posterUrl, jellyfin.enabled, jellyfin.serverUrl, jellyfin.apiKey, jellyfin.playbackUserId]);
+
+  // Playback display: stay on screen the whole time media is playing; only leave when stopped or progress >= 1 (ended).
+  // No time-based exit – playback stays until playback stops or finishes.
   useEffect(() => {
     if (mode !== 'progressslide') return;
     if (onlyPlaybackEnabled) return;
     if (playbackStatus === 'stopped' || playingProgress >= 1) {
       setPlaybackStatus(null);
       setPlayingProgress(0);
+      setPlaybackItem(null);
       setMode('media-showcase');
-      return;
     }
-    if (playbackStatus === 'playing' || playbackStatus === 'paused') {
-      return;
-    }
-    const t = setTimeout(() => setMode('media-showcase'), FULL_SLIDE_DURATION_MS);
-    return () => clearTimeout(t);
   }, [mode, playbackStatus, playingProgress]);
 
   return {
     mode,
     currentMedia,
+    /** Item to show in playback display (same as the media that is "playing"). */
+    playbackItem,
     nextMedia,
     upcomingMedia,
     nowShowingEntries,

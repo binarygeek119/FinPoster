@@ -1,38 +1,18 @@
 /**
- * Metadata fallback service – recover missing artwork and metadata from TMDb/TheTVDB
+ * Metadata fallback service – recover missing artwork and metadata from TMDb/TheTVDB/Google Books/Comic Vine/MusicBrainz
  *
  * Lookup order per spec: primary source -> local cache -> TMDb -> TheTVDB -> default poster.
- * This module handles the TMDb and TheTVDB steps. We use the public APIs with the user's
- * API keys from settings. If keys are missing or a request fails, callers should fall
- * back to the next step (e.g. default poster). Cache is used to store results so we
- * don't hammer the APIs on every load.
+ * Music items can use MusicBrainz (no API key). This module composes the per-provider clients
+ * (see services/metadata/*) and applies cache storage for TMDb poster/backdrop.
  */
 
 import type { MediaItem } from '../types';
 import { cacheService } from './cache';
-
-const DEV_BACKEND_BASE = 'http://localhost:3000';
-
-function backendBaseUrl(): string {
-  if (import.meta.env.DEV) {
-    return DEV_BACKEND_BASE;
-  }
-  return window.location.origin;
-}
-
-async function postJson<T>(path: string, body: unknown): Promise<T | null> {
-  try {
-    const res = await fetch(`${backendBaseUrl()}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
+import { fetchTmdbEnrich, testTmdbApiKey } from './metadata/tmdb';
+import { fetchTvdbEnrich, testTvdbApiKey } from './metadata/tvdb';
+import { fetchGoogleBooksEnrich, testGoogleBooksApiKey } from './metadata/googlebooks';
+import { testComicVineApiKey } from './metadata/comicvine';
+import { fetchMusicBrainzEnrich, testMusicBrainzApiKey } from './metadata/musicbrainz';
 
 /**
  * Try to fill in poster/backdrop/tagline/plot/year from TMDb by movie or TV ID.
@@ -43,134 +23,57 @@ export async function enrichFromTmdb(
   item: MediaItem,
   cacheBucket: 'primary' | 'backdrop' = 'primary'
 ): Promise<Partial<MediaItem> | null> {
-  if (!apiKey) return null;
-  const id = item.tmdbId || item.id;
-  const cacheKey = `tmdb_${item.type}_${id}`;
-  const cached = cacheService.get('metadata', cacheKey);
-  if (cached) {
-    try {
-      return JSON.parse(cached) as Partial<MediaItem>;
-    } catch {
-      // ignore
-    }
-  }
-
-  const update = await postJson<Partial<MediaItem>>('/api/metadata/tmdb/enrich', {
-    apiKey,
-    item,
-  });
+  const update = await fetchTmdbEnrich(apiKey, item);
   if (!update) return null;
-  cacheService.set('metadata', cacheKey, JSON.stringify(update));
   if (update.posterUrl) {
+    const id = item.tmdbId || item.id;
+    const cacheKey = `tmdb_${item.type}_${id}`;
     cacheService.set(cacheBucket, cacheKey + '_poster', update.posterUrl);
   }
   if (update.backdropUrl) {
+    const id = item.tmdbId || item.id;
+    const cacheKey = `tmdb_${item.type}_${id}`;
     cacheService.set('backdrop', cacheKey + '_backdrop', update.backdropUrl);
   }
   return update;
 }
 
 /**
- * TheTVDB is more complex (v4 API requires token). Placeholder: we could add
- * token fetch and then series/poster endpoints. For now we just return null
- * so the fallback chain continues to default poster.
+ * TheTVDB v4 – series metadata and poster. Requires tvdbId on the item.
  */
 export async function enrichFromTvdb(
   apiKey: string,
   item: MediaItem
 ): Promise<Partial<MediaItem> | null> {
-  if (!apiKey || !item.tvdbId) return null;
-  const cacheKey = `tvdb_${item.tvdbId}`;
-  const cached = cacheService.get('metadata', cacheKey);
-  if (cached) {
-    try {
-      return JSON.parse(cached) as Partial<MediaItem>;
-    } catch {
-      // ignore
-    }
-  }
-  const update = await postJson<Partial<MediaItem>>('/api/metadata/tvdb/enrich', {
-    apiKey,
-    item,
-  });
-  if (!update) return null;
-  cacheService.set('metadata', cacheKey, JSON.stringify(update));
-  return update;
+  return fetchTvdbEnrich(apiKey, item);
 }
 
 /**
  * Google Books – used mainly for Book items when the primary source is missing
- * metadata like description, publisher, author image, etc. We use volume search
- * by title and author. API key is optional but recommended.
+ * metadata like description, publisher, author, etc.
  */
 export async function enrichFromGoogleBooks(
   apiKey: string,
   item: MediaItem
 ): Promise<Partial<MediaItem> | null> {
-  if (item.type !== 'Book') return null;
-  const cacheKey = `gbooks_${item.id}`;
-  const cached = cacheService.get('metadata', cacheKey);
-  if (cached) {
-    try {
-      return JSON.parse(cached) as Partial<MediaItem>;
-    } catch {
-      // ignore
-    }
-  }
-
-  const update = await postJson<Partial<MediaItem>>(
-    '/api/metadata/googlebooks/enrich',
-    { apiKey, item }
-  );
-  if (!update) return null;
-  cacheService.set('metadata', cacheKey, JSON.stringify(update));
-  return update;
+  return fetchGoogleBooksEnrich(apiKey, item);
 }
 
 /**
- * Comic Vine – placeholder for comics/graphic novels metadata.
- *
- * The public Comic Vine API normally expects requests from server-side code
- * (with JSONP or CORS headers), so browser-based fetches are unreliable and can
- * easily fail due to CORS even when the key is valid. To avoid confusing users,
- * we proxy tests through the FinPoster backend instead of calling from the browser.
+ * MusicBrainz – Music (album/release) metadata and cover art. Uses OAuth client ID and secret.
  */
-export async function testComicVineApiKey(
-  apiKey: string
-): Promise<boolean> {
-  if (!apiKey) return false;
-  const data = await postJson<{ ok: boolean }>(
-    '/api/metadata/comicvine/test',
-    { apiKey }
-  );
-  return !!data?.ok;
+export async function enrichFromMusicBrainz(
+  item: MediaItem,
+  oauth?: { clientId?: string; clientSecret?: string }
+): Promise<Partial<MediaItem> | null> {
+  return fetchMusicBrainzEnrich(item, oauth);
 }
 
-/**
- * Simple key tests for TMDb and Google Books so the Metadata page can
- * give quick feedback when the user hits \"Test API keys\".
- */
-export async function testTmdbApiKey(apiKey: string): Promise<boolean> {
-  if (!apiKey) return false;
-  const data = await postJson<{ ok: boolean }>('/api/metadata/tmdb/test', {
-    apiKey,
-  });
-  return !!data?.ok;
-}
-
-export async function testGoogleBooksApiKey(apiKey: string): Promise<boolean> {
-  const data = await postJson<{ ok: boolean }>(
-    '/api/metadata/googlebooks/test',
-    { apiKey }
-  );
-  return !!data?.ok;
-}
-
-export async function testTvdbApiKey(apiKey: string): Promise<boolean> {
-  if (!apiKey) return false;
-  const data = await postJson<{ ok: boolean }>(
-    '/api/metadata/tvdb/test',
-    { apiKey }
-  );
-  return !!data?.ok;
-}
+/** Test API keys (used by Metadata settings page). */
+export {
+  testTmdbApiKey,
+  testTvdbApiKey,
+  testGoogleBooksApiKey,
+  testComicVineApiKey,
+  testMusicBrainzApiKey,
+};

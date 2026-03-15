@@ -17,7 +17,7 @@
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  filter: blur(var(--ads-blur-radius, 24px));
+  filter: blur(var(--ads-blur-radius, 1.5rem));
   transform: scale(1.08);
 }
 
@@ -42,11 +42,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(480px, 52vw);
-  border: 20px solid color-mix(in srgb, rgba(255, 255, 255, 0.9) 12%, transparent);
+  width: min(360px, 38%);
+  border: clamp(1rem, 1.4%, 1.25rem) solid color-mix(in srgb, rgba(255, 255, 255, 0.9) 12%, transparent);
   box-sizing: border-box;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0.5rem 2rem rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.15),
     inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
@@ -68,34 +68,34 @@
 
 .ads-display-label-bar {
   width: 100%;
-  padding: 10px 16px;
+  padding: 0.6rem 1rem;
   text-align: center;
   background: rgba(0, 0, 0, 0.5);
 }
 
 .ads-display-label-text {
-  font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+  font-size: clamp(0.9rem, 1.05rem, 1.1rem);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .ads-display-prices {
   position: absolute;
-  bottom: 18px;
-  right: 18px;
-  padding: 8px 12px;
+  bottom: clamp(1rem, 2%, 1.25rem);
+  right: clamp(1rem, 2%, 1.25rem);
+  padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 120px;
+  gap: 0.25rem;
+  min-width: 7.5rem;
 }
 
 .ads-display-price-line {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .ads-display-price-label {

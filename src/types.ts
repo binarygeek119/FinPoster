@@ -67,6 +67,8 @@ export interface MediaItem {
   playbackEndTime?: number;
   /** Runtime string (e.g. "2h 15m", "45 min") for movies/episodes. */
   runtime?: string;
+  /** Cast/people (e.g. actors, directors) from Jellyfin/TMDb. */
+  cast?: Array<{ name: string; role?: string }>;
   /** Source we got this from (for cache keying and debugging). */
   source: MediaSourceKind;
 }
@@ -191,6 +193,8 @@ export interface MediaShowcaseSettings {
   enabledMediaTypes: MediaType[];
   /** Which poster transitions are enabled (one is picked at random when the poster changes). */
   enabledTransitions: PosterTransitionId[];
+  /** Never show the same poster within the last N displays (1 = no restriction, 5 = default). */
+  avoidRepeatWithinLast?: number;
 }
 
 /** How we build the Now Showing list and showtimes. */
@@ -224,18 +228,21 @@ export interface AdsSettings {
   adBackgroundBlurPx?: number;
 }
 
-/** External API keys for metadata fallback (TMDb, TheTVDB, Google Books, Comic Vine). */
+/** External API keys for metadata fallback (TMDb, TheTVDB, Google Books, Comic Vine, MusicBrainz). */
 export interface MetadataSettings {
-  /** When true, use TMDb/TheTVDB/Google Books/Comic Vine to enrich missing artwork and metadata. */
+  /** When true, use TMDb/TheTVDB/Google Books/Comic Vine/MusicBrainz to enrich missing artwork and metadata. */
   metadataAsSource: boolean;
   tmdbApiKey: string;
   tvdbApiKey: string;
   googleBooksApiKey: string;
   comicVineApiKey: string;
+  /** MusicBrainz OAuth – from musicbrainz.org/account/applications. */
+  musicBrainzClientId: string;
+  musicBrainzClientSecret: string;
 }
 
 /** Cache clear options (which buckets to clear). */
-export type CacheBucket = 'primary' | 'logo' | 'metadata' | 'people' | 'backdrop' | 'music' | 'photos';
+export type CacheBucket = 'primary' | 'logo' | 'people' | 'backdrop' | 'music' | 'photos';
 
 /** Logging options – console, file, redaction, debug. */
 export interface LoggingSettings {
@@ -249,9 +256,11 @@ export interface LoggingSettings {
 export interface UiSettings {
   /** Active poster texture upload id (if any). */
   activeTextureId?: string | null;
-  /** Texture visibility on poster: 0 = invisible, 100 = full strength (only when a texture is active). */
+  /** Active full-screen background texture id (if any). Separate from poster texture. */
+  activeBackgroundTextureId?: string | null;
+  /** Texture visibility on poster: 0 = invisible, 100 = full strength (only when a poster texture is active). */
   textureStrength: number;
-  /** Texture visibility on full-screen background: 0 = invisible, 100 = full (when a texture is active). */
+  /** Texture visibility on full-screen background: 0 = invisible, 100 = full (when a background texture is active). */
   backgroundTextureStrength?: number;
   /** When true, dim display pages but keep settings fully bright. */
   dimDisplays: boolean;

@@ -13,12 +13,8 @@ import {
   testGoogleBooksApiKey,
   testComicVineApiKey,
   testTvdbApiKey,
+  testMusicBrainzApiKey,
 } from '../../services/metadataFallback';
-import tmdbLogo from '../../assets/tmdb.png';
-import tvdbLogo from '../../assets/thetvdb.png';
-import googleBooksLogo from '../../assets/google.png';
-import comicVineLogo from '../../assets/comicvine.png';
-
 export function MetadataSettings() {
   const { settings, setSettings } = useSettings();
   const m = settings.metadata;
@@ -67,6 +63,12 @@ export function MetadataSettings() {
     } else {
       pushToast('Comic Vine: no key set');
     }
+
+    const mbOk = await testMusicBrainzApiKey({
+      clientId: m.musicBrainzClientId,
+      clientSecret: m.musicBrainzClientSecret,
+    });
+    pushToast(`MusicBrainz: ${mbOk ? 'OK' : 'failed'}`);
   };
 
   return (
@@ -75,8 +77,8 @@ export function MetadataSettings() {
         <h1>Metadata</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         API keys for metadata fallback. When artwork or metadata is missing from
-        the primary source, FinPoster will try TMDb, TheTVDB, Google Books, and Comic Vine
-        (where applicable) to recover it.
+        the primary source, FinPoster will try TMDb, TheTVDB, Google Books, Comic Vine,
+        and MusicBrainz (where applicable) to recover it.
       </p>
 
       <div
@@ -126,115 +128,175 @@ export function MetadataSettings() {
         </button>
       </div>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -16, marginBottom: 24 }}>
-        When on, missing posters and metadata are filled from TMDb, TheTVDB, Google Books, and Comic Vine when keys are set.
+        When on, missing posters and metadata are filled from TMDb, TheTVDB, Google Books, Comic Vine, and MusicBrainz when keys are set.
       </p>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
         <img
-          src={tmdbLogo}
+          src="/logos/tmdb.png"
           alt="TMDb"
-          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          style={{ height: 90, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <input
-          type="password"
-          className="input input-password"
-          placeholder="••••••••"
-          value={m.tmdbApiKey}
-          onChange={(e) =>
-            setSettings({ metadata: { ...m, tmdbApiKey: e.target.value } })
-          }
-          style={{ flex: 1, minWidth: 0 }}
-        />
-      </label>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-        Get a key at themoviedb.org (free).
-      </p>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <input
+            type="password"
+            className="input input-password"
+            placeholder="••••••••"
+            value={m.tmdbApiKey}
+            onChange={(e) =>
+              setSettings({ metadata: { ...m, tmdbApiKey: e.target.value } })
+            }
+            style={{ width: '100%' }}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+            Get a key at themoviedb.org (free).
+          </p>
+        </div>
+      </div>
 
-      <label
+      <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: 12,
           marginTop: 16,
           marginBottom: 8,
         }}
       >
         <img
-          src={tvdbLogo}
+          src="/logos/thetvdb.png"
           alt="TheTVDB"
-          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          style={{ height: 90, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <input
-          type="password"
-          className="input input-password"
-          placeholder="••••••••"
-          value={m.tvdbApiKey}
-          onChange={(e) =>
-            setSettings({ metadata: { ...m, tvdbApiKey: e.target.value } })
-          }
-          style={{ flex: 1, minWidth: 0 }}
-        />
-      </label>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-        Get a key at thetvdb.com (free).
-      </p>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <input
+            type="password"
+            className="input input-password"
+            placeholder="••••••••"
+            value={m.tvdbApiKey}
+            onChange={(e) =>
+              setSettings({ metadata: { ...m, tvdbApiKey: e.target.value } })
+            }
+            style={{ width: '100%' }}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+            Get a key at thetvdb.com (free).
+          </p>
+        </div>
+      </div>
 
-      <label
+      <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: 12,
           marginTop: 16,
           marginBottom: 8,
         }}
       >
         <img
-          src={googleBooksLogo}
+          src="/logos/googlebooks.png"
           alt="Google Books"
-          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          style={{ height: 48, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
-        <input
-          type="password"
-          className="input input-password"
-          placeholder="••••••••"
-          value={m.googleBooksApiKey}
-          onChange={(e) =>
-            setSettings({ metadata: { ...m, googleBooksApiKey: e.target.value } })
-          }
-          style={{ flex: 1, minWidth: 0 }}
-        />
-      </label>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-        Optional – get a key at console.cloud.google.com (Google Books API).
-      </p>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <input
+            type="password"
+            className="input input-password"
+            placeholder="••••••••"
+            value={m.googleBooksApiKey}
+            onChange={(e) =>
+              setSettings({ metadata: { ...m, googleBooksApiKey: e.target.value } })
+            }
+            style={{ width: '100%' }}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+            Optional – get a key at console.cloud.google.com (Google Books API).
+          </p>
+        </div>
+      </div>
 
-      <label
+      <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: 12,
           marginTop: 16,
           marginBottom: 8,
         }}
       >
         <img
-          src={comicVineLogo}
+          src="/logos/comicvine.png"
           alt="Comic Vine"
-          style={{ height: 28, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          style={{ height: 90, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
         />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <input
+            type="password"
+            className="input input-password"
+            placeholder="••••••••"
+            value={m.comicVineApiKey}
+            onChange={(e) =>
+              setSettings({ metadata: { ...m, comicVineApiKey: e.target.value } })
+            }
+            style={{ width: '100%' }}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+            Get a key at comicvine.gamespot.com/api.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 16, marginBottom: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
+          <img
+            src="/logos/musicbrainz.png"
+            alt="MusicBrainz"
+            style={{ height: 180, width: 180, objectFit: 'contain', flexShrink: 0 }}
+          />
+        </div>
+        <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 8,
+        }}
+      >
+        <span style={{ width: 90, fontSize: 13, color: 'var(--text-muted)' }}>OAuth Client ID</span>
         <input
           type="password"
           className="input input-password"
           placeholder="••••••••"
-          value={m.comicVineApiKey}
+          value={m.musicBrainzClientId}
           onChange={(e) =>
-            setSettings({ metadata: { ...m, comicVineApiKey: e.target.value } })
+            setSettings({ metadata: { ...m, musicBrainzClientId: e.target.value } })
+          }
+          style={{ flex: 1, minWidth: 0 }}
+        />
+      </label>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 8,
+        }}
+      >
+        <span style={{ width: 90, fontSize: 13, color: 'var(--text-muted)' }}>OAuth Client Secret</span>
+        <input
+          type="password"
+          className="input input-password"
+          placeholder="••••••••"
+          value={m.musicBrainzClientSecret}
+          onChange={(e) =>
+            setSettings({ metadata: { ...m, musicBrainzClientSecret: e.target.value } })
           }
           style={{ flex: 1, minWidth: 0 }}
         />
       </label>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-        Get a key at comicvine.gamespot.com/api.
+        From musicbrainz.org/account/applications. Client ID is used in User-Agent; secret kept for future OAuth flows.
       </p>
 
         <div style={{ marginTop: 20 }}>
@@ -242,6 +304,7 @@ export function MetadataSettings() {
             Test API keys
           </button>
         </div>
+      </div>
       </div>
       {/* Toast stack in bottom-right; each API emits its own line and they stack upward */}
       {toasts.length > 0 && (

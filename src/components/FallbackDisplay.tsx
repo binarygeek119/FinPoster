@@ -10,7 +10,6 @@
  */
 
 import './FallbackDisplay.css';
-import hero from '../assets/hero.png';
 
 export function FallbackDisplay() {
   return (
@@ -18,7 +17,7 @@ export function FallbackDisplay() {
       <div className="fallback-poster glass-panel">
         <div className="fallback-poster-inner">
           <img
-            src={hero}
+            src="/logos/hero.png"
             alt=""
             className="fallback-hero-img"
           />

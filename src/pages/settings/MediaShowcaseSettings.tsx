@@ -47,6 +47,8 @@ const tabStyle = (active: boolean) => ({
 
 const POSTER_DISPLAY_MIN = 5;
 const POSTER_DISPLAY_MAX = 120;
+const AVOID_REPEAT_MIN = 1;
+const AVOID_REPEAT_MAX = 50;
 
 /** Metapill keys and display labels for per-pill color settings */
 const METAPILL_COLOR_KEYS: { key: string; label: string }[] = [
@@ -176,6 +178,28 @@ export function MediaShowcaseSettings() {
         }}
         aria-label="Poster display time in seconds"
       />
+
+      <label style={{ display: 'block', marginTop: 16, marginBottom: 8 }}>
+        Never show the same poster within the last (displays)
+      </label>
+      <input
+        type="number"
+        className="input"
+        min={AVOID_REPEAT_MIN}
+        max={AVOID_REPEAT_MAX}
+        value={m.avoidRepeatWithinLast ?? 5}
+        onChange={(e) => {
+          const num = parseInt(e.target.value, 10);
+          if (!Number.isNaN(num)) {
+            const clamped = Math.max(AVOID_REPEAT_MIN, Math.min(AVOID_REPEAT_MAX, num));
+            setSettings({ mediaShowcase: { ...m, avoidRepeatWithinLast: clamped } });
+          }
+        }}
+        aria-label="Avoid repeating same poster within last N displays"
+      />
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+        Next poster is chosen at random but will not repeat any of the last X shown (1 = no restriction).
+      </p>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
         <input

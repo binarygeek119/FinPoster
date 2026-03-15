@@ -1,13 +1,12 @@
 /**
  * Media Showcase – main display mode: full-screen posters with metadata ticker
  *
- * Replaces the old "Random Poster" page. Shows one media item at a time with
- * backdrop, center poster, Jellyfin logo bottom-left, and scrolling ticker.
- * When playback is active we show start/end time and a live-updating progress bar.
- * Poster display duration and ticker speed come from Media Showcase settings.
+ * Shows one media item at a time with backdrop, cinema title, center poster,
+ * metapills, and ticker. Playback (progress bar) is shown only on the separate
+ * Playback display when rotation switches to progressslide.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { MediaItem, PosterTransitionId } from '../types';
 import { getTickerText } from '../utils/tickerText';
 import { getDisplayFontFamily } from '../constants/displayFonts';
@@ -16,88 +15,53 @@ import { DEFAULT_TEXTURES } from '../constants/defaultTextures';
 import { resolveAssetUrl } from '../services/jellyfin';
 import { getEffectiveDisplayColors } from '../utils/displayColors';
 import { useViewportBackdrop } from '../context/DisplayViewportBackdrop';
-import { TickerSlide } from './TickerSlide';
-import { Metapills } from './Metapills';
+import { CinemaPart, ShowcasePart, MetapillsPart, TickerPart } from './displayParts';
 import './MediaShowcase.css';
-import mainBackground from '../assets/mainbackground.png';
+import mainBackground from '../assets/background/mainbackground.png';
 
 interface MediaShowcaseProps {
   /** Current item to show; if null, parent should switch to fallback or next mode. */
   item: MediaItem | null;
-  /** Whether this item is currently "playing" (show overlay). */
+  /** Unused – playback is shown on the separate Playback display only. */
   isPlaying?: boolean;
-  /** Progress 0..1 for the bar. */
+  /** Unused – playback is shown on the separate Playback display only. */
   progress?: number;
 }
 
-export function MediaShowcase({ item, isPlaying, progress = 0 }: MediaShowcaseProps) {
+export function MediaShowcase({ item }: MediaShowcaseProps) {
   const { settings } = useSettings();
   const opts = settings.mediaShowcase;
 
-  // Pick a random enabled transition when the poster item changes.
   const currentTransition = useMemo((): PosterTransitionId => {
     const list = opts.enabledTransitions ?? ['fade'];
     if (!item?.id || list.length === 0) return 'fade';
     return list[Math.floor(Math.random() * list.length)];
   }, [item?.id, opts.enabledTransitions]);
 
-  // Ticker shows only: plot (movie/TV) or album info (music). Rendered via TickerSlide at bottom.
   const tickerText = getTickerText(item) || item?.title || '';
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const titleWrapRef = useRef<HTMLDivElement>(null);
-  const [titleScale, setTitleScale] = useState(1);
-
-  useEffect(() => {
-    const wrap = titleWrapRef.current;
-    const title = titleRef.current;
-    if (!wrap || !title || !item?.title) {
-      setTitleScale(1);
-      return;
-    }
-    const updateScale = () => {
-      const wrapWidth = wrap.clientWidth;
-      const scrollWidth = title.scrollWidth;
-      if (wrapWidth > 0 && scrollWidth > wrapWidth) {
-        setTitleScale(wrapWidth / scrollWidth);
-      } else {
-        setTitleScale(1);
-      }
-    };
-    updateScale();
-    const ro = new ResizeObserver(updateScale);
-    ro.observe(wrap);
-    return () => ro.disconnect();
-  }, [item?.title]);
-
-  if (!item) {
-    return null;
-  }
-
-  const backdropUrl = resolveAssetUrl(item.backdropUrl) || mainBackground || '';
-  const posterUrl = resolveAssetUrl(item.posterUrl);
-  const logoUrl = resolveAssetUrl(item.logoUrl);
+  const backdropUrl = item ? resolveAssetUrl(item.backdropUrl) || mainBackground || '' : '';
   const blurPx = opts.backdropBlurPx ?? 18;
-  const { setViewportBackdrop } = useViewportBackdrop();
 
+  const { setViewportBackdrop } = useViewportBackdrop();
   useEffect(() => {
-    setViewportBackdrop(backdropUrl || null, blurPx);
-    return () => setViewportBackdrop(null, 0);
+    setViewportBackdrop(backdropUrl || null, blurPx, true);
+    return () => setViewportBackdrop(null, 0, false);
   }, [backdropUrl, blurPx, setViewportBackdrop]);
+
+  if (!item) return null;
 
   const displayTitle = (settings.ui?.homeCinemaTitle?.trim() || 'Home Cinema') || '';
   const showMediaLogo = opts.showMediaLogo !== false;
-  const showLogoBelow = showMediaLogo && !!logoUrl;
-  const titleFontFamily = getDisplayFontFamily(opts.homeCinemaFont && opts.homeCinemaFont !== 'default' ? opts.homeCinemaFont : opts.displayFont);
+  const titleFontFamily = getDisplayFontFamily(
+    opts.homeCinemaFont && opts.homeCinemaFont !== 'default' ? opts.homeCinemaFont : opts.displayFont
+  );
   const colors = useMemo(() => getEffectiveDisplayColors(opts), [opts]);
   const titleColor = colors.homeCinemaTitleColor;
 
   const ui = settings.ui;
   const textureList = useMemo(
-    () => [
-      ...DEFAULT_TEXTURES,
-      ...settings.uploads.filter((u) => u.category === 'textures'),
-    ],
-    [settings.uploads],
+    () => [...DEFAULT_TEXTURES, ...settings.uploads.filter((u) => u.category === 'textures')],
+    [settings.uploads]
   );
   const posterTexture = useMemo(() => {
     const id = ui.activeTextureId;
@@ -112,119 +76,44 @@ export function MediaShowcase({ item, isPlaying, progress = 0 }: MediaShowcasePr
 
   return (
     <div className="media-showcase">
-      {/* Backdrop is rendered at viewport level by DisplayLayout (not scaled) */}
       <div className="media-showcase-overlay" />
-
-      {/* Home Cinema title (static) */}
-      <div ref={titleWrapRef} className="media-showcase-title-wrap">
-        <h1
-          ref={titleRef}
-          className="media-showcase-title"
-          style={{
-            transform: `scale(${titleScale})`,
-            ...(titleFontFamily ? { fontFamily: titleFontFamily } : {}),
-            ...(titleColor ? { color: titleColor } : {}),
-          }}
-        >
-          {displayTitle}
-        </h1>
-      </div>
-
-      {/* Main content: poster (+ optional logo below) then Metapills */}
       <div className="media-showcase-main">
-        <div className="media-showcase-poster-wrap">
-          <div
-            className={`media-showcase-poster-block glass-panel${showMediaLogo ? '' : ' media-showcase-poster-block--no-logo'}`}
-            style={{
-              ['--poster-border-color' as string]: colors.borderColor,
-            }}
-          >
-            <div
-              key={item.id}
-              className={`media-showcase-poster media-showcase-poster--${currentTransition}`}
-              style={{ ['--show-duration' as string]: `${opts.posterDisplaySeconds}s` }}
-            >
-              {posterUrl ? (
-                <img src={posterUrl} alt="" className="media-showcase-poster-img" />
-              ) : (
-                <div className="media-showcase-poster-placeholder">
-                  <span>{item.title}</span>
-                </div>
-              )}
-            </div>
-            {showMediaLogo && (
-              <div className="media-showcase-media-label-wrap">
-                {showLogoBelow ? (
-                  <img src={logoUrl!} alt="" className="media-showcase-media-logo" />
-                ) : (
-                  <span
-                    className="media-showcase-media-title"
-                    style={{
-                      ...(titleFontFamily ? { fontFamily: titleFontFamily } : {}),
-                      ...(titleColor ? { color: titleColor } : {}),
-                    }}
-                  >
-                    {item.title}
-                  </span>
-                )}
-              </div>
-            )}
-            {/* Poster texture overlay: only over this poster block */}
-            {posterTexture && posterTextureStrength > 0 && (
-              <div
-                className="media-showcase-poster-texture"
-                style={{
-                  backgroundImage: `url(${posterTexture.url})`,
-                  opacity: posterTextureStrength,
-                }}
-              />
-            )}
-          </div>
+        <CinemaPart
+          className="media-showcase-cinema"
+          displayTitle={displayTitle}
+          fontFamily={titleFontFamily}
+          color={titleColor}
+          titleClassName="media-showcase-title"
+        />
+        <div className="media-showcase-main-content">
+          <ShowcasePart
+            className="media-showcase-showcase"
+            noLogoClassName="media-showcase-showcase--no-logo"
+            item={item}
+            showMediaLogo={showMediaLogo}
+            colors={colors}
+            posterTexture={posterTexture}
+            posterTextureStrength={posterTextureStrength}
+            currentTransition={currentTransition}
+            posterDisplaySeconds={opts.posterDisplaySeconds ?? 10}
+            titleFontFamily={titleFontFamily}
+            titleColor={titleColor}
+          />
+          <MetapillsPart
+            className="media-showcase-metapills-wrap"
+            item={item}
+            pillColors={colors.metapillsColors}
+          />
         </div>
-        {/* Metapills: rating, year, score, runtime – right below poster, above TickerSlide */}
-        <div className="media-showcase-metapills-wrap">
-          <Metapills item={item} pillColors={colors.metapillsColors} />
-        </div>
-      </div>
-
-      {/* Playback overlay: start time, progress bar, end time */}
-      {isPlaying && (
-        <div className="media-showcase-playback glass-panel">
-          <span className="media-showcase-time">
-            {item.playbackStartTime != null
-              ? formatTime(item.playbackStartTime)
-              : '--:--'}
-          </span>
-          <div className="media-showcase-progress-wrap">
-            <div
-              className="media-showcase-progress-fill"
-              style={{ width: `${progress * 100}%` }}
-            />
-          </div>
-          <span className="media-showcase-time">
-            {item.playbackEndTime != null
-              ? formatTime(item.playbackEndTime)
-              : '--:--'}
-          </span>
-        </div>
-      )}
-
-      {/* TickerSlide at bottom: logo | scrolling ticker (plot/album info) | time pill */}
-      <div className="media-showcase-tickerslide-wrap">
-        <TickerSlide
+        <TickerPart
+          className="media-showcase-tickerslide-wrap"
           tickerText={tickerText}
           tickerSpeedPxPerSec={opts.tickerScrollSpeedPxPerSec}
           tickerColor={colors.tickerColor}
           timePillColor={colors.timePillColor}
-          tickerFontFamily={getDisplayFontFamily(opts.displayFont)}
+          tickerFontFamily={getDisplayFontFamily(opts?.displayFont)}
         />
       </div>
     </div>
   );
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }

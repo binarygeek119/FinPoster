@@ -8,11 +8,13 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 export interface ViewportBackdropState {
   backdropUrl: string | null;
   blurPx: number;
+  /** When true, backdrop is cropped to ticker width and cut at bottom of ticker (inside scaled content). */
+  cropToContentFrame?: boolean;
 }
 
 const defaultState: ViewportBackdropState = { backdropUrl: null, blurPx: 0 };
 
-type SetViewportBackdrop = (url: string | null, blurPx?: number) => void;
+type SetViewportBackdrop = (url: string | null, blurPx?: number, cropToContentFrame?: boolean) => void;
 
 const DisplayViewportBackdropContext = createContext<{
   state: ViewportBackdropState;
@@ -21,9 +23,11 @@ const DisplayViewportBackdropContext = createContext<{
 
 export function DisplayViewportBackdropProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ViewportBackdropState>(defaultState);
-  const setViewportBackdrop = useCallback<SetViewportBackdrop>((url, blurPx = 0) => {
+  const setViewportBackdrop = useCallback<SetViewportBackdrop>((url, blurPx = 0, cropToContentFrame = false) => {
     setState((prev) =>
-      prev.backdropUrl === url && prev.blurPx === blurPx ? prev : { backdropUrl: url, blurPx }
+      prev.backdropUrl === url && prev.blurPx === blurPx && prev.cropToContentFrame === cropToContentFrame
+        ? prev
+        : { backdropUrl: url, blurPx, cropToContentFrame }
     );
   }, []);
   return (

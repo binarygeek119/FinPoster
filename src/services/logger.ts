@@ -64,6 +64,8 @@ function buildRedactionList(settings: AppSettings | null): string[] {
     add(m.tvdbApiKey);
     add(m.googleBooksApiKey);
     add(m.comicVineApiKey);
+    add(m.musicBrainzClientId);
+    add(m.musicBrainzClientSecret);
   }
   return list;
 }
