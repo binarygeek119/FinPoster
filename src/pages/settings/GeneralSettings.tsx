@@ -198,9 +198,9 @@ export function GeneralSettings() {
 
       {allTextures.length > 0 && (
         <>
-          <h3 style={{ marginTop: 20 }}>Active poster texture</h3>
+          <h3 style={{ marginTop: 20 }}>Poster texture</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
-            Choose one texture to overlay on the poster display. Use strength to blend it.
+            Texture overlaid on the poster/card in the display.
           </p>
           <select
             className="input"
@@ -224,86 +224,112 @@ export function GeneralSettings() {
             ))}
           </select>
           {ui.activeTextureId && (
-            <>
-              <div style={{ marginTop: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-                  Poster overlay strength (0 = invisible, 100 = full)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={ui.textureStrength ?? 100}
-                    onChange={(e) => {
-                      const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+                Poster texture strength (0 = invisible, 100 = full)
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={ui.textureStrength ?? 100}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    setSettings((prev) => ({
+                      ui: { ...prev.ui, textureStrength: v },
+                    }));
+                  }}
+                  style={{ flex: 1, accentColor: 'var(--accent)' }}
+                />
+                <input
+                  type="number"
+                  className="input"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={ui.textureStrength ?? 100}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (!Number.isNaN(v)) {
+                      const clamped = Math.max(0, Math.min(100, v));
                       setSettings((prev) => ({
-                        ui: { ...prev.ui, textureStrength: v },
+                        ui: { ...prev.ui, textureStrength: clamped },
                       }));
-                    }}
-                    style={{ flex: 1, accentColor: 'var(--accent)' }}
-                  />
-                  <input
-                    type="number"
-                    className="input"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={ui.textureStrength ?? 100}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (!Number.isNaN(v)) {
-                        const clamped = Math.max(0, Math.min(100, v));
-                        setSettings((prev) => ({
-                          ui: { ...prev.ui, textureStrength: clamped },
-                        }));
-                      }
-                    }}
-                    style={{ width: 64, textAlign: 'center' }}
-                    aria-label="Poster overlay strength"
-                  />
-                </div>
+                    }
+                  }}
+                  style={{ width: 64, textAlign: 'center' }}
+                  aria-label="Poster overlay strength"
+                />
               </div>
-              <div style={{ marginTop: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-                  Background texture strength (0 = invisible, 100 = full)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={ui.backgroundTextureStrength ?? 100}
-                    onChange={(e) => {
-                      const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+            </div>
+          )}
+
+          <h3 style={{ marginTop: 24 }}>Background texture</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+            Texture overlaid on the full-screen background (independent of poster).
+          </p>
+          <select
+            className="input"
+            value={ui.activeBackgroundTextureId ?? ''}
+            onChange={(e) =>
+              setSettings({
+                ui: {
+                  ...ui,
+                  activeBackgroundTextureId: e.target.value || null,
+                },
+              })
+            }
+            aria-label="Active background texture"
+          >
+            <option value="">None</option>
+            <option value="random">Random</option>
+            {allTextures.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          {ui.activeBackgroundTextureId && (
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+                Background texture strength (0 = invisible, 100 = full)
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={ui.backgroundTextureStrength ?? 100}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    setSettings((prev) => ({
+                      ui: { ...prev.ui, backgroundTextureStrength: v },
+                    }));
+                  }}
+                  style={{ flex: 1, accentColor: 'var(--accent)' }}
+                />
+                <input
+                  type="number"
+                  className="input"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={ui.backgroundTextureStrength ?? 100}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (!Number.isNaN(v)) {
+                      const clamped = Math.max(0, Math.min(100, v));
                       setSettings((prev) => ({
-                        ui: { ...prev.ui, backgroundTextureStrength: v },
+                        ui: { ...prev.ui, backgroundTextureStrength: clamped },
                       }));
-                    }}
-                    style={{ flex: 1, accentColor: 'var(--accent)' }}
-                  />
-                  <input
-                    type="number"
-                    className="input"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={ui.backgroundTextureStrength ?? 100}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (!Number.isNaN(v)) {
-                        const clamped = Math.max(0, Math.min(100, v));
-                        setSettings((prev) => ({
-                          ui: { ...prev.ui, backgroundTextureStrength: clamped },
-                        }));
-                      }
-                    }}
-                    style={{ width: 64, textAlign: 'center' }}
-                    aria-label="Background texture strength"
-                  />
-                </div>
+                    }
+                  }}
+                  style={{ width: 64, textAlign: 'center' }}
+                  aria-label="Background texture strength"
+                />
               </div>
-            </>
+            </div>
           )}
         </>
       )}

@@ -9,7 +9,7 @@ import { useSettings } from '../store/settingsStore';
 import { getDisplayFontFamily } from '../constants/displayFonts';
 import { resolveAssetUrl } from '../services/jellyfin';
 import { getEffectiveDisplayColors } from '../utils/displayColors';
-import mainBackground from '../assets/mainbackground.png';
+import mainBackground from '../assets/background/mainbackground.png';
 import './HomeCinema.css';
 
 interface HomeCinemaProps {
@@ -95,8 +95,10 @@ export function HomeCinema({ item }: HomeCinemaProps) {
   const colors = getEffectiveDisplayColors(opts);
   const titleColor = colors.homeCinemaTitleColor;
   const displayTitle = (settings.ui?.homeCinemaTitle?.trim() || 'Home Cinema') || '';
+  const isEpisode = (item.type || '').toLowerCase() === 'episode';
   const showMediaLogo = showMediaLogoSetting;
-  const showLogoBelow = showMediaLogo && !!logoUrl;
+  const showLogoBelow = (showMediaLogo && !!logoUrl) || (isEpisode && !!logoUrl);
+  const showTitleFallback = !showLogoBelow && !isEpisode;
 
   return (
     <div className="homecinema">
@@ -126,7 +128,7 @@ export function HomeCinema({ item }: HomeCinemaProps) {
 
         <div className="homecinema-poster-wrap">
           <div
-            className={`homecinema-poster-block glass-panel${showMediaLogo ? '' : ' homecinema-poster-block--no-media-label'}`}
+            className={`homecinema-poster-block glass-panel${showLogoBelow || showTitleFallback ? '' : ' homecinema-poster-block--no-media-label'}`}
             style={{
               ['--poster-border-color' as string]: colors.borderColor,
             }}
@@ -140,7 +142,7 @@ export function HomeCinema({ item }: HomeCinemaProps) {
                 </div>
               )}
             </div>
-            {showMediaLogo && (
+            {(showLogoBelow || showTitleFallback) && (
               <div ref={subtitleWrapRef} className="homecinema-media-label-wrap">
                 {showLogoBelow ? (
                   <img

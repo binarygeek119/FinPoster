@@ -6,7 +6,7 @@
  * assisted by AI. It uses the same glass styling as other settings pages.
  */
 
-import authorLogo from '../../assets/authorlogo.png';
+import authorLogo from '../../assets/author/authorlogo.png';
 
 export function AboutSettings() {
   return (
@@ -52,7 +52,7 @@ export function AboutSettings() {
         <a
           href="https://github.com/binarygeek119/FinPoster"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -65,6 +65,20 @@ export function AboutSettings() {
         >
           <span style={{ fontWeight: 500 }}>github.com/binarygeek119/FinPoster</span>
         </a>
+      </section>
+
+      <section style={{ marginBottom: 24 }}>
+        <h2>What the display needs</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>
+          The poster display reads the browser viewport size (window width and height) to scale
+          the layout so it fills the screen. Resizing the window updates the scale automatically.
+          No special resolution is required; any window or full-screen size works.
+        </p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          The design is fixed at 1440×900 and scaled to cover the viewport. Viewport dimensions
+          are available app-wide via the <code style={{ fontSize: 12 }}>useViewport()</code> hook
+          for any component that needs them.
+        </p>
       </section>
 
       <section>

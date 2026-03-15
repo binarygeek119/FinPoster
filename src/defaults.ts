@@ -93,6 +93,7 @@ export const defaultMediaShowcase = {
   metapillsColors: {} as Record<string, string>,
   enabledMediaTypes: [...DEFAULT_MEDIA_TYPES],
   enabledTransitions: [...DEFAULT_POSTER_TRANSITIONS],
+  avoidRepeatWithinLast: 5,
 };
 
 export const defaultNowShowing = {
@@ -121,6 +122,8 @@ export const defaultMetadata = {
   tvdbApiKey: '',
   googleBooksApiKey: '',
   comicVineApiKey: '',
+  musicBrainzClientId: '',
+  musicBrainzClientSecret: '',
 };
 
 export const defaultLogging: LoggingSettings = {
@@ -132,6 +135,7 @@ export const defaultLogging: LoggingSettings = {
 
 export const defaultUi: UiSettings = {
   activeTextureId: null,
+  activeBackgroundTextureId: null,
   textureStrength: 100,
   backgroundTextureStrength: 100,
   dimDisplays: false,

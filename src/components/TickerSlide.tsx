@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '../store/settingsStore';
 import { getDisplayFontFamily } from '../constants/displayFonts';
 import { getEffectiveDisplayColors } from '../utils/displayColors';
-import jellyfinLogo from '../assets/jellyfin.png';
 import './TickerSlide.css';
 
 export interface TickerSlideProps {
@@ -50,7 +49,7 @@ export function TickerSlide({ tickerText = 'FinPoster • Digital Signage', tick
 
   const server = getConnectedServer(settings);
   const speed = tickerSpeedPxPerSec ?? settings.mediaShowcase?.tickerScrollSpeedPxPerSec ?? 40;
-  const font = tickerFontFamily ?? (settings.mediaShowcase?.displayFont ? getDisplayFontFamily(settings.mediaShowcase.displayFont) : '');
+  const font = tickerFontFamily ?? (settings.mediaShowcase?.displayFont ? getDisplayFontFamily(settings.mediaShowcase.displayFont) : undefined) ?? '';
   const effectiveColors = getEffectiveDisplayColors(settings.mediaShowcase);
   const tickerCol = tickerColor ?? effectiveColors.tickerColor;
   const pillCol = timePillColor ?? effectiveColors.timePillColor;
@@ -59,6 +58,7 @@ export function TickerSlide({ tickerText = 'FinPoster • Digital Signage', tick
     ...(pillCol ? { ['--ticker-time-pill-color' as string]: pillCol } : {}),
     ...(font ? { ['--ticker-bar-font' as string]: font } : {}),
   };
+  const textStyle: React.CSSProperties = font ? { fontFamily: font } : {};
 
   useEffect(() => {
     const t = setInterval(() => setTime(formatTime(new Date())), 1000);
@@ -77,14 +77,14 @@ export function TickerSlide({ tickerText = 'FinPoster • Digital Signage', tick
       <div className="tickerslide-bar glass-panel" style={barStyle}>
         <div className="tickerslide-logo-wrap">
           {server === 'jellyfin' && (
-            <img src={jellyfinLogo} alt="Jellyfin" className="tickerslide-logo-img" />
+            <img src="/logos/jellyfin.png" alt="Jellyfin" className="tickerslide-logo-img" />
           )}
           {server === 'plex' && !plexLogoFailed && (
-            <img src="/plex.png" alt="Plex" className="tickerslide-logo-img" onError={() => setPlexLogoFailed(true)} />
+            <img src="/logos/plex.png" alt="Plex" className="tickerslide-logo-img" onError={() => setPlexLogoFailed(true)} />
           )}
           {server === 'plex' && plexLogoFailed && <span className="tickerslide-logo-fallback tickerslide-logo-fallback-visible">Plex</span>}
           {server === 'emby' && !embyLogoFailed && (
-            <img src="/emby.png" alt="Emby" className="tickerslide-logo-img" onError={() => setEmbyLogoFailed(true)} />
+            <img src="/logos/emby.png" alt="Emby" className="tickerslide-logo-img" onError={() => setEmbyLogoFailed(true)} />
           )}
           {server === 'emby' && embyLogoFailed && <span className="tickerslide-logo-fallback tickerslide-logo-fallback-visible">Emby</span>}
           {!server && <span className="tickerslide-logo-fallback tickerslide-logo-fallback-visible">Media</span>}
@@ -93,11 +93,11 @@ export function TickerSlide({ tickerText = 'FinPoster • Digital Signage', tick
           className="tickerslide-ticker"
           style={{ ['--ticker-duration' as string]: `${tickerDurationSec}s` } as React.CSSProperties}
         >
-          <div ref={tickerRef} className="tickerslide-ticker-inner">
+          <div ref={tickerRef} className="tickerslide-ticker-inner" style={textStyle}>
             {tickerText}
           </div>
         </div>
-        <div className="tickerslide-time-pill">
+        <div className="tickerslide-time-pill" style={textStyle}>
           {time}
         </div>
       </div>

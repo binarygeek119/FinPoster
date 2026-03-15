@@ -42,16 +42,13 @@ export function ProgressSlide({ item, progress: progressProp = 0 }: ProgressSlid
   const { settings } = useSettings();
   const colors = getEffectiveDisplayColors(settings.mediaShowcase);
 
-  if (!hasPlayback(item)) {
-    return null;
-  }
-
-  const start = item!.playbackStartTime!;
-  const end = item!.playbackEndTime!;
+  const start = item?.playbackStartTime ?? 0;
+  const end = item?.playbackEndTime ?? 0;
   const duration = Math.max(1, end - start);
 
-  // When no external progress is provided, derive from elapsed time so the bar moves smoothly.
+  // When no external progress is provided, derive from elapsed time so the bar moves smoothly. (Hooks must run unconditionally.)
   useEffect(() => {
+    if (!hasPlayback(item)) return;
     const tick = () => {
       const elapsed = Date.now() / 1000 - start;
       const p = Math.max(0, Math.min(1, elapsed / duration));
@@ -60,7 +57,11 @@ export function ProgressSlide({ item, progress: progressProp = 0 }: ProgressSlid
     tick();
     const id = setInterval(tick, TICK_MS);
     return () => clearInterval(id);
-  }, [start, duration]);
+  }, [item, start, duration]);
+
+  if (!hasPlayback(item)) {
+    return null;
+  }
 
   const progress = progressProp > 0 ? progressProp : timeBasedProgress;
 

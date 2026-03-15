@@ -88,7 +88,9 @@ export function NowShowing({ entries }: NowShowingProps) {
               )}
               <span className="now-showing-time">{entry.showtime}</span>
               {entry.tickerText && (
-                <p className="now-showing-ticker">{entry.tickerText}</p>
+                <div className="now-showing-ticker-wrap" style={{ ['--now-showing-ticker-duration' as string]: '25s' }}>
+                  <div className="now-showing-ticker-inner">{entry.tickerText}</div>
+                </div>
               )}
             </div>
           </div>

@@ -13,28 +13,28 @@ const ARR_TABS: Record<
 > = {
   lidarr: {
     label: 'Lidarr',
-    logoSrc: '/lidarr.png',
+    logoSrc: '/logos/lidarr.png',
     description: 'Lidarr manages your music collection and automation.',
     details:
       'Integration with Lidarr is planned for a future update. You will be able to connect FinPoster to Lidarr to display recently added albums, sync music metadata, and optionally trigger or reflect Lidarr activity on your display.',
   },
   radarr: {
     label: 'Radarr',
-    logoSrc: '/radarr.png',
+    logoSrc: '/logos/radarr.png',
     description: 'Radarr manages your movie collection and automation.',
     details:
       'Integration with Radarr is planned for a future update. You will be able to connect FinPoster to Radarr to display recently added movies, sync metadata, and optionally trigger or reflect Radarr activity on your display.',
   },
   sonarr: {
     label: 'Sonarr',
-    logoSrc: '/sonarr.png',
+    logoSrc: '/logos/sonarr.png',
     description: 'Sonarr manages your TV show collection and automation.',
     details:
       'Integration with Sonarr is planned for a future update. You will be able to connect FinPoster to Sonarr to display recently added series or episodes, sync metadata, and optionally trigger or reflect Sonarr activity on your display.',
   },
   chaptarr: {
     label: 'Chaptarr',
-    logoSrc: '/chaptarr.png',
+    logoSrc: '/logos/chaptarr.png',
     description: 'Chaptarr manages your audiobook and chapter metadata.',
     details:
       'Integration with Chaptarr is planned for a future update. You will be able to connect FinPoster to Chaptarr for audiobook or chapter-aware display and metadata sync.',

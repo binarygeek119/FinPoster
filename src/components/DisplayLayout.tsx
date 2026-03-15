@@ -10,39 +10,39 @@
  * scaled to fit the browser window so the layout stays the same at any window size.
  */
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../store/settingsStore';
 import { DEFAULT_TEXTURES } from '../constants/defaultTextures';
 import { useViewportBackdrop } from '../context/DisplayViewportBackdrop';
-import mainBackground from '../assets/mainbackground.png';
+import { useViewport } from '../hooks/useViewport';
+import mainBackground from '../assets/background/mainbackground.png';
 
-const DESIGN_WIDTH = 1920;
-const DESIGN_HEIGHT = 1080;
+/** Design size = content column only; width fits between red-line boundaries, nothing past them. */
+const DESIGN_WIDTH = 560;
+const DESIGN_HEIGHT = 1100;
 
 interface DisplayLayoutProps {
   children: React.ReactNode;
 }
 
-/** Scale so poster fills the whole window (whole page = poster; may crop edges on narrow/tall windows). */
-function getScaleCover(): number {
-  if (typeof window === 'undefined') return 1;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  if (w <= 0 || h <= 0) return 1;
-  return Math.max(w / DESIGN_WIDTH, h / DESIGN_HEIGHT);
+/** Scale so content fits the viewport (contain) – layout stays the same at any resolution, no cropping. */
+function getScale(width: number, height: number): number {
+  const w = width > 0 ? width : DESIGN_WIDTH;
+  const h = height > 0 ? height : DESIGN_HEIGHT;
+  return Math.min(w / DESIGN_WIDTH, h / DESIGN_HEIGHT);
 }
 
 export function DisplayLayout({ children }: DisplayLayoutProps) {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const [scale, setScale] = useState(getScaleCover);
-
-  useEffect(() => {
-    const onResize = () => setScale(getScaleCover());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const { width, height } = useViewport();
+  const effectiveWidth = width > 0 ? width : DESIGN_WIDTH;
+  const effectiveHeight = height > 0 ? height : DESIGN_HEIGHT;
+  const scale = useMemo(
+    () => getScale(effectiveWidth, effectiveHeight),
+    [effectiveWidth, effectiveHeight],
+  );
 
   const handleClick = () => {
     navigate('/settings/general');
@@ -57,15 +57,15 @@ export function DisplayLayout({ children }: DisplayLayoutProps) {
     [settings.uploads],
   );
   const backgroundTexture = useMemo(() => {
-    const id = ui.activeTextureId;
+    const id = ui.activeBackgroundTextureId;
     if (!id) return null;
     if (id === 'random') {
       if (textureList.length === 0) return null;
       return textureList[Math.floor(Math.random() * textureList.length)];
     }
     return textureList.find((u) => u.id === id) ?? null;
-  }, [ui.activeTextureId, textureList]);
-  const backgroundTextureStrength = Math.max(0, Math.min(100, ui.backgroundTextureStrength ?? ui.textureStrength ?? 100)) / 100;
+  }, [ui.activeBackgroundTextureId, textureList]);
+  const backgroundTextureStrength = Math.max(0, Math.min(100, ui.backgroundTextureStrength ?? 100)) / 100;
   const { state: viewportBackdrop } = useViewportBackdrop();
 
   return (
@@ -86,6 +86,7 @@ export function DisplayLayout({ children }: DisplayLayoutProps) {
         inset: 0,
         width: '100%',
         height: '100%',
+        ...(width > 0 && height > 0 ? {} : { minWidth: DESIGN_WIDTH, minHeight: DESIGN_HEIGHT }),
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
@@ -93,21 +94,7 @@ export function DisplayLayout({ children }: DisplayLayoutProps) {
         backgroundColor: 'var(--jellyfin-dark)',
       }}
     >
-      {/* Background/backdrop: fill viewport */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 0,
-          backgroundImage: mainBackground ? `url(${mainBackground})` : undefined,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundColor: 'var(--jellyfin-dark)',
-          pointerEvents: 'none',
-        }}
-      />
-      {viewportBackdrop.backdropUrl && (
+      {viewportBackdrop.backdropUrl && !viewportBackdrop.cropToContentFrame && (
         <div
           style={{
             position: 'absolute',
@@ -122,7 +109,7 @@ export function DisplayLayout({ children }: DisplayLayoutProps) {
           }}
         />
       )}
-      {backgroundTexture && backgroundTextureStrength > 0 && (
+      {backgroundTexture && backgroundTextureStrength > 0 && !viewportBackdrop.cropToContentFrame && (
         <div
           style={{
             position: 'absolute',
@@ -148,9 +135,70 @@ export function DisplayLayout({ children }: DisplayLayoutProps) {
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
           flexShrink: 0,
-          overflow: 'visible',
+          overflow: 'hidden',
         }}
       >
+        {/* Main background: inside scaled container so it scales with content */}
+        {mainBackground && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              backgroundImage: `url(${mainBackground}), linear-gradient(180deg, #1c1c1c 0%, #101010 100%)`,
+              backgroundSize: 'cover, 100% 100%',
+              backgroundPosition: 'center, 0 0',
+              backgroundRepeat: 'no-repeat, no-repeat',
+              backgroundColor: 'var(--jellyfin-dark)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+        {/* Item backdrop + texture cropped to content frame (when cropToContentFrame) */}
+        {viewportBackdrop.cropToContentFrame && (
+          <>
+            {viewportBackdrop.backdropUrl && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: DESIGN_WIDTH,
+                  maxWidth: '75%',
+                  top: 0,
+                  bottom: 0,
+                  zIndex: 0,
+                  backgroundImage: `url(${viewportBackdrop.backdropUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  filter: viewportBackdrop.blurPx > 0 ? `blur(${viewportBackdrop.blurPx}px)` : 'none',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+            {backgroundTexture && backgroundTextureStrength > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: DESIGN_WIDTH,
+                  maxWidth: '75%',
+                  top: 0,
+                  bottom: 0,
+                  zIndex: 0,
+                  backgroundImage: `url(${backgroundTexture.url})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  opacity: backgroundTextureStrength,
+                  filter: 'grayscale(100%)',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+          </>
+        )}
         <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }}>
           {children}
         </div>

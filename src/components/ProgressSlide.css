@@ -1,4 +1,4 @@
-/* ProgressSlide – start time, progress bar, end time */
+/* ProgressSlide – start time, progress bar, end time. Sizes relative to 1440×900 design. */
 
 .progress-slide {
   position: relative;
@@ -7,23 +7,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 1rem;
 }
 
 .progress-slide-bar {
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 900px;
-  height: 64px;
-  padding: 0 24px;
-  gap: 20px;
-  border-radius: 16px;
+  max-width: 62.5%;
+  height: clamp(48px, 4rem, 72px);
+  padding: 0 clamp(16px, 1.7%, 24px);
+  gap: clamp(12px, 1.4%, 20px);
+  border-radius: clamp(10px, 1.1%, 16px);
 }
 
 .progress-slide-time {
   flex-shrink: 0;
-  font-size: 1.25rem;
+  font-size: clamp(0.95rem, 1.1rem, 1.25rem);
   font-weight: 600;
   color: var(--text-primary);
   min-width: 3ch;
@@ -33,7 +33,7 @@
 .progress-slide-track {
   flex: 1;
   min-width: 0;
-  height: 12px;
+  height: clamp(8px, 0.75rem, 12px);
   background: rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   overflow: hidden;

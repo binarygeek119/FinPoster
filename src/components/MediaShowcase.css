@@ -7,6 +7,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 0;
 }
 
 .media-showcase-backdrop {
@@ -32,11 +33,42 @@
   pointer-events: none;
 }
 
-/* Home Cinema title (static) at top */
-.media-showcase-title-wrap {
+/* Main: cinema at top, content (centered), TickerSlide at bottom */
+.media-showcase-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  padding: 0;
+  gap: 0;
+}
+
+/* Cinema – pinned to top */
+.media-showcase-main > .media-showcase-cinema {
+  flex-shrink: 0;
+}
+
+/* Content above ticker: grows to fill space; content centered so showcase sits higher */
+.media-showcase-main-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-bottom: 0.5rem;
+}
+
+/* 1. Cinema – Home Cinema title */
+.media-showcase-cinema {
   flex-shrink: 0;
   width: 100%;
-  padding: clamp(12px, 2vw, 24px) 24px clamp(16px, 3vw, 32px);
+  padding: 0 clamp(16px, 1.7%, 24px) 0.5rem;
+  margin-top: -0.5rem;
   text-align: center;
   overflow: hidden;
   position: relative;
@@ -44,7 +76,7 @@
 }
 .media-showcase-title {
   margin: 0;
-  font-size: clamp(1.5rem, 6vw, 3.5rem);
+  font-size: clamp(1.5rem, 2.25rem, 3.5rem);
   font-weight: 700;
   white-space: nowrap;
   transform-origin: center top;
@@ -52,41 +84,24 @@
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
 }
 
-/* Main block: poster (centered) + Metapills right below, above TickerSlide */
-.media-showcase-main {
-  flex: 1;
-  min-height: 0;
+/* 2. Showcase – poster + logo + texture (larger, sits higher when content centered) */
+.media-showcase-showcase {
+  position: relative;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  padding-top: clamp(8px, 1.5vw, 16px);
-}
-
-.media-showcase-poster-wrap {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: min(460px, 48%);
+  border: clamp(1rem, 1.4%, 1.25rem) solid color-mix(in srgb, var(--poster-border-color, #fff) 12%, transparent);
+  box-sizing: border-box;
+  box-shadow:
+    0 0.5rem 2rem rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
   pointer-events: none;
 }
 
-.media-showcase-poster-block {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(480px, 52vw);
-  border: 20px solid color-mix(in srgb, var(--poster-border-color, #fff) 12%, transparent);
-  box-sizing: border-box;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
-}
-
-.media-showcase-poster-texture {
+.media-showcase-showcase-texture {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -96,61 +111,70 @@
   pointer-events: none;
   border-radius: 0;
 }
-.media-showcase-poster-block--no-logo .media-showcase-poster {
+
+.media-showcase-showcase--no-logo .media-showcase-poster {
   width: 100%;
 }
 
 .media-showcase-poster {
+  position: relative;
   width: 100%;
   aspect-ratio: 2/3;
+  min-height: 0;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Fixed box size: image never affects dimensions when it changes */
+  contain: layout size;
 }
 
 .media-showcase-poster-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  transition: opacity 0.15s ease;
 }
 
 .media-showcase-poster-placeholder {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 1rem;
   text-align: center;
-  font-size: 1.1rem;
+  font-size: clamp(1rem, 1.1rem, 1.25rem);
   color: var(--text-secondary);
 }
 
-/* Media logo or title below poster */
+/* Media logo or title below poster – wrap always content-sized (no blank strip); logo capped so it fits */
 .media-showcase-media-label-wrap {
   flex-shrink: 0;
   width: 100%;
-  padding: 12px 16px 16px;
+  padding: 0.1rem 0.35rem;
   text-align: center;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
 }
 .media-showcase-media-logo {
   max-width: 100%;
-  max-height: clamp(48px, 8vw, 80px);
+  max-height: clamp(2rem, 5vw, 2.75rem);
   width: auto;
   height: auto;
   object-fit: contain;
+  object-position: center;
   filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.75));
+  display: block;
 }
 .media-showcase-media-title {
   display: inline-block;
   white-space: nowrap;
-  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-size: clamp(0.52rem, 0.68rem, 0.78rem);
   font-weight: 600;
   color: var(--text-primary);
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
@@ -162,19 +186,19 @@
   to { opacity: 1; }
 }
 @keyframes media-showcase-slide-left {
-  from { opacity: 0; transform: translateX(80px); }
+  from { opacity: 0; transform: translateX(5rem); }
   to { opacity: 1; transform: translateX(0); }
 }
 @keyframes media-showcase-slide-right {
-  from { opacity: 0; transform: translateX(-80px); }
+  from { opacity: 0; transform: translateX(-5rem); }
   to { opacity: 1; transform: translateX(0); }
 }
 @keyframes media-showcase-slide-up {
-  from { opacity: 0; transform: translateY(60px); }
+  from { opacity: 0; transform: translateY(3.75rem); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes media-showcase-slide-down {
-  from { opacity: 0; transform: translateY(-60px); }
+  from { opacity: 0; transform: translateY(-3.75rem); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes media-showcase-zoom-in {
@@ -208,44 +232,51 @@
   animation: media-showcase-zoom-out 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Metapills: right below poster (padding so they don't touch), above TickerSlide; scale to fit */
+/* 3. Metapills */
 .media-showcase-metapills-wrap {
   flex-shrink: 0;
   width: 100%;
+  max-width: min(720px, 75%);
+  margin: 0.75rem auto 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(20px, 4vw, 36px) 32px clamp(20px, 4vw, 36px);
+  padding: 0 1.25rem 0;
   pointer-events: none;
   min-height: 0;
 }
 
 .media-showcase-metapills-wrap .metapills {
   height: auto;
+  width: 100%;
   padding: 0;
-  max-width: min(520px, 58vw);
+  max-width: 100%;
 }
 
 .media-showcase-metapills-wrap .metapills-inner {
   max-width: 100%;
-  gap: clamp(6px, 1.2vw, 12px);
+  width: 100%;
+  justify-content: center;
+  gap: clamp(0.28rem, 0.55%, 0.5rem);
 }
 
 .media-showcase-metapills-wrap .metapills-pill {
-  padding: clamp(6px, 1.2vw, 12px) clamp(12px, 2.5vw, 20px);
-  font-size: clamp(0.7rem, 1.8vw, 0.95rem);
+  padding: 0.1rem 0.38rem;
+  font-size: clamp(0.48rem, 0.65rem, 0.74rem);
+  line-height: 1.15;
 }
 
-/* TickerSlide bar at bottom (logo | ticker | time) – width aligned to poster block */
+/* 5. TickerSlide – logo | ticker | time pill */
 .media-showcase-tickerslide-wrap {
   flex-shrink: 0;
   width: 100%;
-  max-width: min(720px, 75vw);
-  height: 72px;
+  max-width: min(560px, 58%);
+  height: clamp(56px, 8%, 80px);
+  min-height: 3.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px 12px;
+  padding: 0 1.25rem 1rem;
   margin: 0 auto;
 }
 
@@ -258,16 +289,19 @@
   max-width: none;
 }
 
-.media-showcase-playback {
-  position: absolute;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
+/* 4. Progressslide – playback progress bar (inside main) */
+.media-showcase-progressslide {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: min(720px, 75%);
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 20px;
-  min-width: 320px;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.6rem 1.25rem;
+  min-width: 20rem;
+  box-sizing: border-box;
 }
 
 .media-showcase-time {
@@ -278,16 +312,16 @@
 
 .media-showcase-progress-wrap {
   flex: 1;
-  height: 6px;
+  height: 0.375rem;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  border-radius: 0.2rem;
   overflow: hidden;
 }
 
 .media-showcase-progress-fill {
   height: 100%;
   background: var(--accent);
-  border-radius: 3px;
+  border-radius: 0.2rem;
   transition: width 0.3s linear;
 }
 

@@ -13,10 +13,8 @@ import {
   getJellyfinLibraryItems,
   testJellyfinConnection,
 } from '../../services/jellyfin';
-import { logError } from '../../services/logger';
+import { logError, logDebug, logInfo } from '../../services/logger';
 import { InfoPopup } from '../../components/InfoPopup';
-import jellyfinLogo from '../../assets/jellyfin.png';
-
 export function JellyfinSettings() {
   const { settings, setSettings } = useSettings();
   const [loading, setLoading] = useState(false);
@@ -35,9 +33,11 @@ export function JellyfinSettings() {
       setInfo('Enter server URL and API key first, then click "Load libraries".');
       return;
     }
+    logDebug('[Jellyfin] Load libraries', j.serverUrl);
     setLoading(true);
     try {
       const list = await getJellyfinLibraries(j.serverUrl, j.apiKey, j.playbackUserId);
+      logDebug('[Jellyfin] Libraries response', list.length, 'items');
       // Treat unknown/empty CollectionType as supported; allow more types (e.g. "movieseries", "homevideos")
       const supportedTypes = new Set([
         'movies',
@@ -55,10 +55,12 @@ export function JellyfinSettings() {
         return supportedTypes.has(t);
       });
       setLibraries(filtered);
+      const idsToSync = j.libraryIds.length > 0 ? j.libraryIds : filtered.map((l) => l.id);
       setSettings({
         jellyfin: {
           ...j,
           cachedLibraries: filtered,
+          libraryIds: idsToSync,
         },
       });
       if (filtered.length === 0) {
@@ -66,6 +68,36 @@ export function JellyfinSettings() {
         setInfo(
           `No supported Jellyfin libraries were returned. Collection types seen: ${rawTypes || 'none'}.`
         );
+      } else if (idsToSync.length > 0) {
+        logInfo('[Jellyfin] Auto-sync after load libraries', idsToSync.length, 'libraries');
+        setInfo(`Loaded ${filtered.length} libraries. Auto-syncing media…`);
+        setSyncing(true);
+        setSettings({ ui: { ...settings.ui, mediaSyncStopped: false } });
+        try {
+          for (const libId of idsToSync) {
+            if (cancelSyncRef.current) break;
+            logDebug('[Jellyfin] Auto-sync library', libId);
+            await getJellyfinLibraryItems(
+              j.serverUrl,
+              j.apiKey,
+              libId,
+              j.enabledMediaTypes,
+              0,
+              j.playbackUserId
+            );
+          }
+          if (cancelSyncRef.current) {
+            setInfo('Sync stopped.');
+          } else {
+            setSettings({ ui: { ...settings.ui, mediaSyncRequestedAt: Date.now() } });
+            setInfo(`Loaded ${filtered.length} libraries. Auto-sync completed.`);
+          }
+        } catch (e) {
+          logError('FinPoster: auto-sync after load libraries', e);
+          setInfo(`Loaded ${filtered.length} libraries. Auto-sync failed (check backend).`);
+        } finally {
+          setSyncing(false);
+        }
       } else {
         setInfo(`Loaded ${filtered.length} libraries from Jellyfin.`);
       }
@@ -82,9 +114,11 @@ export function JellyfinSettings() {
       setInfo('Enter server URL and API key first.');
       return;
     }
+    logDebug('[Jellyfin] Test connection', j.serverUrl);
     setTesting(true);
     const ok = await testJellyfinConnection(j.serverUrl, j.apiKey);
     setTesting(false);
+    logInfo('[Jellyfin] Test connection', ok ? 'OK' : 'failed');
     if (ok) {
       setInfo('Jellyfin connection looks good.');
     } else {
@@ -108,24 +142,29 @@ export function JellyfinSettings() {
     cancelSyncRef.current = false;
     setSettings({ ui: { ...settings.ui, mediaSyncStopped: false } });
     setSyncing(true);
+    logInfo('[Jellyfin] Sync media started', { libraries: j.libraryIds.length });
+    logDebug('[Jellyfin] Sync libraries', j.libraryIds);
     try {
       for (const libId of j.libraryIds) {
         if (cancelSyncRef.current) break;
+        logDebug('[Jellyfin] Syncing library', libId);
         await getJellyfinLibraryItems(
           j.serverUrl,
           j.apiKey,
           libId,
           j.enabledMediaTypes,
-          50,
+          0,
           j.playbackUserId
         );
       }
       if (cancelSyncRef.current) {
+        logInfo('[Jellyfin] Sync stopped by user');
         setInfo('Sync stopped.');
       } else {
         setSettings({
           ui: { ...settings.ui, mediaSyncRequestedAt: Date.now() },
         });
+        logInfo('[Jellyfin] Sync media completed');
         setInfo('Media cache synced. Display will show updated items.');
       }
     } catch (e) {
@@ -137,6 +176,7 @@ export function JellyfinSettings() {
   };
 
   const stopSync = () => {
+    logDebug('[Jellyfin] Stop sync requested');
     cancelSyncRef.current = true;
     setSyncing(false);
     setSettings({ ui: { ...settings.ui, mediaSyncStopped: true } });
@@ -148,7 +188,7 @@ export function JellyfinSettings() {
       <div className="glass-panel" style={{ padding: 24, maxWidth: 640 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
           <img
-            src={jellyfinLogo}
+            src="/logos/jellyfin.png"
             alt=""
             style={{ height: 40, width: 'auto', objectFit: 'contain' }}
           />
@@ -315,27 +355,21 @@ export function JellyfinSettings() {
             type="button"
             className="btn"
             style={{ marginLeft: 12 }}
-            onClick={syncMedia}
+            onClick={syncing ? stopSync : syncMedia}
             disabled={
-              syncing ||
-              !j.enabled ||
-              !j.serverUrl ||
-              !j.apiKey ||
-              !j.libraryIds.length
+              !syncing &&
+              (!j.enabled ||
+                !j.serverUrl ||
+                !j.apiKey ||
+                !j.libraryIds.length)
             }
-            title="Pull media from Jellyfin into the cache (backend must be running)"
+            title={
+              syncing
+                ? 'Stop current sync and pause scheduled sync'
+                : 'Pull media from Jellyfin into the cache (backend must be running)'
+            }
           >
-            {syncing ? 'Syncing…' : 'Sync media'}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            style={{ marginLeft: 8 }}
-            onClick={stopSync}
-            disabled={!syncing && (settings.ui.mediaSyncIntervalMinutes ?? 0) <= 0}
-            title="Stop current sync and pause scheduled sync"
-          >
-            Stop sync
+            {syncing ? 'Stop sync' : 'Sync media'}
           </button>
         </div>
 

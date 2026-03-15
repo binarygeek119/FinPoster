@@ -22,6 +22,7 @@ import { NowShowingSettings } from './pages/settings/NowShowingSettings';
 import { AdsSettings } from './pages/settings/AdsSettings';
 import { MetadataSettings } from './pages/settings/MetadataSettings';
 import { CacheSettings } from './pages/settings/CacheSettings';
+import { SyncSettings } from './pages/settings/SyncSettings';
 import { BackupSettings } from './pages/settings/BackupSettings';
 import { AboutSettings } from './pages/settings/AboutSettings';
 import { PlaybackSettings } from './pages/settings/PlaybackSettings';
@@ -69,6 +70,7 @@ function App() {
             <Route path="ads" element={<AdsSettings />} />
             <Route path="metadata" element={<MetadataSettings />} />
             <Route path="cache" element={<CacheSettings />} />
+            <Route path="sync" element={<SyncSettings />} />
             <Route path="backup" element={<BackupSettings />} />
             <Route path="arr">
               <Route index element={<ArrSettings />} />

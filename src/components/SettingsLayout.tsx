@@ -9,13 +9,10 @@
 
 import { NavLink, Outlet } from 'react-router-dom';
 import { useSettings } from '../store/settingsStore';
-import logo from '../assets/hero.png';
-import jellyfinLogo from '../assets/jellyfin.png';
-
 const MEDIA_SERVERS: { path: string; label: string; logoSrc: string }[] = [
-  { path: '/settings/jellyfin', label: 'Jellyfin', logoSrc: jellyfinLogo },
-  { path: '/settings/plex', label: 'Plex', logoSrc: '/plex.png' },
-  { path: '/settings/emby', label: 'Emby', logoSrc: '/emby.png' },
+  { path: '/settings/jellyfin', label: 'Jellyfin', logoSrc: '/logos/jellyfin.png' },
+  { path: '/settings/plex', label: 'Plex', logoSrc: '/logos/plex.png' },
+  { path: '/settings/emby', label: 'Emby', logoSrc: '/logos/emby.png' },
 ];
 
 const SETTINGS_NAV: { path: string; label: string }[] = [
@@ -25,6 +22,7 @@ const SETTINGS_NAV: { path: string; label: string }[] = [
   { path: '/settings/ads', label: 'Ads' },
   { path: '/settings/metadata', label: 'Metadata' },
   { path: '/settings/cache', label: 'Cache' },
+  { path: '/settings/sync', label: 'Sync' },
   { path: '/settings/backup', label: 'Backup' },
   { path: '/settings/about', label: 'About' },
 ];
@@ -53,7 +51,7 @@ export function SettingsLayout() {
             }}
           >
             <img
-              src={logo}
+              src="/logos/hero.png"
               alt="FinPoster"
               style={{ width: 120, height: 'auto', objectFit: 'contain' }}
             />
@@ -187,10 +185,10 @@ export function SettingsLayout() {
         {arrOpen && (
           <div style={{ marginBottom: 4 }}>
             {[
-              { subPath: '/settings/arr/lidarr', label: 'Lidarr', logoSrc: '/lidarr.png' },
-              { subPath: '/settings/arr/radarr', label: 'Radarr', logoSrc: '/radarr.png' },
-              { subPath: '/settings/arr/sonarr', label: 'Sonarr', logoSrc: '/sonarr.png' },
-              { subPath: '/settings/arr/chaptarr', label: 'Chaptarr', logoSrc: '/chaptarr.png' },
+              { subPath: '/settings/arr/lidarr', label: 'Lidarr', logoSrc: '/logos/lidarr.png' },
+              { subPath: '/settings/arr/radarr', label: 'Radarr', logoSrc: '/logos/radarr.png' },
+              { subPath: '/settings/arr/sonarr', label: 'Sonarr', logoSrc: '/logos/sonarr.png' },
+              { subPath: '/settings/arr/chaptarr', label: 'Chaptarr', logoSrc: '/logos/chaptarr.png' },
             ].map(({ subPath, label: subLabel, logoSrc }) => (
               <NavLink
                 key={subPath}
